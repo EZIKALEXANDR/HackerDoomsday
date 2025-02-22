@@ -1,4 +1,4 @@
-**Hacker Doomsday is a trojan written in python and capable of many features, but let's start in order:**
+**HackerDoomsday is a trojan written in python and capable of many features, but let's start in order:**
 
 ![image](https://github.com/user-attachments/assets/f70b3456-6d21-46d1-ad92-de26f7794313)
 *First page of the application*
