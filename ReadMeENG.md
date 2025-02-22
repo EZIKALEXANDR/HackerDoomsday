@@ -1,2 +1,0 @@
-# HackerDoomsday
-HackerDoomsday
