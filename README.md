@@ -16,5 +16,5 @@ After launching, a siren starts to sound and a fake message appears stating that
 - When closing a virus process, a BSOD occurs, but not because the process is critical, but because VBS monitors the presence of the process, and if the process is not found, a bat is launched, which causes a BSOD. But if you first close VBS, and then only the virus process, everything will go well (I want to make the process truly critical in future versions, but I don’t know how to do this in Python and I’m not even sure if this is possible, but if someone knows how to do this, you can write in the issue or by contact information).
 - The virus autostarts via Shell in the registry (it also starts in safe mode)
 - The virus file is copied to Windows\INF under a different name and under the attributes hidden and system
-
+- BSOD will be thrown when opening Windows or Windows\INF folders in Explorer
 *If you have any wishes or ideas, you can write an issue or contact information* 
