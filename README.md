@@ -17,4 +17,5 @@ After launching, a siren starts to sound and a fake message appears stating that
 - The virus autostarts via Shell in the registry (it also starts in safe mode)
 - The virus file is copied to Windows\INF under a different name and under the attributes hidden and system
 - BSOD will be thrown when opening Windows or Windows\INF folders in Explorer
+  
 *If you have any wishes or ideas, you can write an issue or contact information* 
