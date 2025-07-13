@@ -1,0 +1,13 @@
+ctypes
+math
+os
+pygame
+pywin32
+Pillow
+tkinter
+subprocess
+psutil
+shutil
+threading
+keyboard
+moviepy==1.0.3

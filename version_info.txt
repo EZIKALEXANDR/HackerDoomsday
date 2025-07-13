@@ -16,11 +16,11 @@ VSVersionInfo(
           '040904B0',
           [StringStruct('CompanyName', u'EZIKALEXANDR'),
            StringStruct('FileDescription', u'Hackers will take over this world!'),
-           StringStruct('FileVersion', u'1.0.0.0'),
+           StringStruct('FileVersion', u'1.1.0.0'),
            StringStruct('InternalName', u'HackerDoomsday'),
            StringStruct('OriginalFilename', u'HackerDoomsday.exe'),
            StringStruct('ProductName', u"It's not a virus, that's for sure"),
-           StringStruct('ProductVersion', u'1.0.0.0'),
+           StringStruct('ProductVersion', u'1.1.0.0'),
            StringStruct('LegalCopyright', u'EZIKALEXANDR')]
         )
       ]
