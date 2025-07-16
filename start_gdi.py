@@ -1,21 +1,23 @@
 import threading
+
 from gdi import (
-    TunnelEffect, 
-    ErrorIcons, 
-    SuperMelt, 
-    VoidEffect, 
-    HellEffect, 
-    PanScreen, 
-    InvertEffect, 
-    SinesEffect, 
-    RotateTunnel, 
-    RandomImage, 
-    Smelt, 
-    SwipeScreen, 
-    RasterHorizontal)
+    TunnelEffect,
+    ErrorIcons,
+    SuperMelt,
+    VoidEffect,
+    HellEffect,
+    PanScreen,
+    InvertEffect,
+    SinesEffect,
+    RotateTunnel,
+    RandomImage,
+    Smelt,
+    SwipeScreen,
+    RasterHorizontal,
+ErrorIconsCursor)
 
 ###
-stop_event = threading.Event()  
+stop_event = threading.Event()
 ###
 
 def starttunnel():
@@ -25,7 +27,7 @@ def starttunnel():
     return thread
 
 def starticonscursor():
-    effect = ErrorIcons(stop_event=stop_event)
+    effect = ErrorIconsCursor(stop_event=stop_event)
     thread = threading.Thread(target=effect.run)
     thread.start()
     return thread
@@ -79,8 +81,7 @@ def startrottun():
     return thread
 
 def startdrawimages():
-    image_paths = ["image1.png", "image2.png"]  
-    effect = RandomImage(image_paths=image_paths, stop_event=stop_event)
+    effect = RandomImage(stop_event=stop_event)
     thread = threading.Thread(target=effect.run)
     thread.start()
     return thread
@@ -102,5 +103,4 @@ def startrastagHori():
     thread = threading.Thread(target=effect.run)
     thread.start()
     return thread
-
 
