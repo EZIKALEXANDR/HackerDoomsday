@@ -452,8 +452,8 @@ def run_app():
 
         choices = [
             ["ERROR:Failed to connect to server", "360 TOTAL SECURITY", "NORTON FREE", "SHADOW DEFENDER", "VIRUS GUARD 3000", "CRYPTO LOCKER PRO"],
-            ["C:\\Program Files\\NewAntivirus", "C:\\Windows\\NewAntivirus", "C:\\System\\Critical", "D:\\Hidden\\Malware"],
-            ["Every day.", "Every week.", "Never", "Only on Full Moon"]
+            ["C:\\Program Files\\NewAntivirus", "C:\\Windows\\NewAntivirus", "C:\\System\\Critical", "C:\\Hidden\\Malware"],
+            ["Every day.", "Every week.", "Never"]
         ]
         positions = [{"x": 70, "y": 300}, {"x": 1300, "y": 300}, {"x": 600, "y": 500}]
         label_texts = [texts[current_lang]["product"], texts[current_lang]["path"], texts[current_lang]["virusbase"]]
