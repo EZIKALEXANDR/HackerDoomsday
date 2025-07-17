@@ -282,9 +282,7 @@ class ErrorIconsCursor(ScreenEffect):
         self._init_dc()
         try:
             while not self.stop_event.is_set():
-                # Получаем текущую позицию курсора
                 x, y = win32api.GetCursorPos()
-                # Рисуем иконку рядом с курсором с небольшим случайным смещением
                 win32gui.DrawIcon(
                     self.hdc,
                     x + random.randint(-30, 30),
