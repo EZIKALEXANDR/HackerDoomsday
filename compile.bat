@@ -1,4 +1,4 @@
-pyinstaller --onefile --windowed ^
+pyinstaller --onefile --windowed -noconsole ^
 --name "HackerDoomsday" ^
 --icon "appicon.ico" ^
 --uac-admin ^
