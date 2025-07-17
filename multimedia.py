@@ -102,23 +102,17 @@ def play_video_fullscreen(video_path):
 
 
 def playMusic_runappmain():
-    def _play():
+    def play():
         try:
-            path = resource_path("runapp_main.MP3")
-            if not os.path.exists(path):
-                print(f"[Ошибка] Музыка не найдена по пути: {path}")
-                return
-
             pygame.mixer.init()
-            pygame.mixer.music.load(path)
+            pygame.mixer.music.load(resource_path("runapp_main.MP3"))
             pygame.mixer.music.set_volume(1.0)
             pygame.mixer.music.play(-1)
             print("[OK] Музыка запущена")
         except Exception as e:
             print(f"[Ошибка запуска музыки] {e}")
-
     # Запуск в фоне
-    threading.Thread(target=_play, daemon=True).start()
+    threading.Thread(target=play, daemon=True).start()
 
 
 def playMusic_after50():
