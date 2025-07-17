@@ -86,8 +86,6 @@ def change_shell_aftervideo():
             print(f"Ошибка при установке значения реестра: {e}")
     threading.Thread(target=worker, daemon=True).start()
 
-
-
 def change_shell():
     def worker():
         try:
@@ -97,8 +95,6 @@ def change_shell():
         except Exception as e:
             print(f"Ошибка при установке значения реестра: {e}")
     threading.Thread(target=worker, daemon=True).start()
-
-
 
 def update_icons():
     def worker():
@@ -132,8 +128,6 @@ def update_icons():
             except Exception as e:
                 print(f"[error] {file_type} -> {e}")
     threading.Thread(target=worker, daemon=True).start()
-
-
 
 def monitor_explorer(poll_interval=0.5):
     # Список папок для отслеживания
