@@ -10,14 +10,17 @@ import random
 from regedit_and_virus_safe import configure_system_settings_after_50, update_icons
 from multimedia import playMusic_after50, set_wallpaper, change_txt_2, create_random_files
 
+
 # Утилита для получения пути к ресурсам
 def resource_path(relative_path):
     base_path = os.path.join(getattr(sys, '_MEIPASS', os.path.abspath(".")), "resources")
     return os.path.join(base_path, relative_path)
 
+
 ctypes.windll.user32.SetProcessDPIAware()
 
-class ChaosFormatter: # не используется, может в следуующей версии
+
+class ChaosFormatter:  # не используется, может в следуующей версии
     WINDOW_WIDTH = 600
     WINDOW_HEIGHT = 180
     SHAKE_AREA_HEIGHT = 180
@@ -97,8 +100,10 @@ class ChaosFormatter: # не используется, может в следу�
                 return
             for w in self.windows + self.bottom_windows:
                 w.configure(bg="red")
-            self.master.after(int(speed * 1000), lambda: [w.configure(bg="black") for w in self.windows + self.bottom_windows])
+            self.master.after(int(speed * 1000),
+                              lambda: [w.configure(bg="black") for w in self.windows + self.bottom_windows])
             self.master.after(int(speed * 2000), lambda: flasher(count + 1))
+
         flasher()
 
     def _spawn_chaos(self, count):
@@ -141,13 +146,14 @@ class ChaosFormatter: # не используется, может в следу�
             if not self.running or not self.bottom_windows:
                 return
             base_positions = [(int(w.geometry().split("+")[1]), int(w.geometry().split("+")[2]))
-                             for w in self.bottom_windows]
+                              for w in self.bottom_windows]
             for i, w in enumerate(self.bottom_windows):
                 base_x, base_y = base_positions[i]
                 new_x = base_x + random.randint(-self.BOTTOM_SHAKE_RANGE, self.BOTTOM_SHAKE_RANGE)
                 new_y = base_y + random.randint(-self.BOTTOM_SHAKE_RANGE // 4, self.BOTTOM_SHAKE_RANGE // 4)
                 w.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}+{new_x}+{new_y}")
             self.master.after(300, shaker)
+
         shaker()
 
     def _keep_on_top_loop(self):
@@ -170,7 +176,7 @@ class ChaosFormatter: # не используется, может в следу�
     def _update_timer(self, label):
         if not self.running:
             return
-        chaotic_time = f"{random.randint(0,59):02}:{random.randint(0,59):02}:{random.randint(0,59):02}"
+        chaotic_time = f"{random.randint(0, 59):02}:{random.randint(0, 59):02}:{random.randint(0, 59):02}"
         label.config(text=f"Time Left: {chaotic_time}")
         self.master.after(100, lambda: self._update_timer(label))
 
@@ -199,12 +205,13 @@ class ChaosFormatter: # не используется, может в следу�
         self.master.after(int(random.uniform(50, 200)), lambda: self._glitch_effect(label))
 
     def run(self):
-        self.master.mainloop() # не используется
+        self.master.mainloop()  # не используется
 
 
 # Заглушка для выбора, здесь будет что-то интересное, наверное
 def on_specific_selection():
     print("Specific selection triggered!")
+
 
 def run_app():
     # Константы
@@ -214,10 +221,10 @@ def run_app():
     PROGRESS_BAR_WIDTH = 1400
     PROGRESS_BAR_HEIGHT = 150
 
-    #Инициализация окна
+    # Инициализация окна
     root = tk.Tk()
     root.attributes('-fullscreen', True, '-topmost', True)
-    root.title("Установка")
+    root.title("Installing")
     root.resizable(False, False)
     root.overrideredirect(True)
 
@@ -292,6 +299,7 @@ def run_app():
     is_protection_active = False
     is_alt_f4_page_open = False
     is_install_page = False
+    is_fake_msgbox_open = False
 
     # Глобальные виджеты
     welcome_label = None
@@ -310,6 +318,55 @@ def run_app():
             widget.destroy()
         bg_label = tk.Label(container)
         bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+
+    def show_fake_msgbox():
+        nonlocal is_fake_msgbox_open
+        if is_fake_msgbox_open:
+            return  # Не открываем если уже
+
+        is_fake_msgbox_open = True
+
+        messages = [  # Список "ошибок"
+            "Critical system fault!",
+            "Memory access violation at 0x000AFB",
+            "Exception 0xC0000005 occurred",
+            "Application error: Unknown behavior",
+            "Runtime error: 0xDEAD0001",
+            "Security module failure!",
+            "Stack overflow detected!",
+            "Antivirus service crashed!",
+            "Access to system memory denied!",
+            "Error 0x000000FE: Driver fault"
+        ]
+        box = tk.Toplevel(root)
+        box.title("Error")
+        box.geometry("400x180+600+300")
+        box.configure(bg="black")
+        box.attributes("-topmost", True)
+        box.resizable(False, False)
+        box.overrideredirect(True)
+
+        msg = random.choice(messages)
+        tk.Label(box, text=msg, font=("Consolas", 14), fg="red", bg="black", wraplength=380).pack(pady=30)
+
+        def on_close():
+            nonlocal is_fake_msgbox_open
+            is_fake_msgbox_open = False
+            box.destroy()
+
+        tk.Button(box, text="OK", font=("Arial", 14), bg="darkred", fg="white", command=on_close).pack(pady=10)
+
+        def shake(count=10):
+            if count <= 0:
+                return
+            x = box.winfo_x()
+            y = box.winfo_y()
+            dx = random.randint(-10, 10)
+            dy = random.randint(-10, 10)
+            box.geometry(f"+{x + dx}+{y + dy}")
+            box.after(50, lambda: shake(count - 1))
+
+        box.after(100, shake)
 
     def set_background(image_path=None, redness=0):
         """Установка фона: обои или сплошной цвет."""
@@ -331,6 +388,13 @@ def run_app():
             img = Image.new("RGB", (w, h), (0, 0, 0))  # Чёрный фон при ошибке
             bg_label.image = ImageTk.PhotoImage(img)
             bg_label.config(image=bg_label.image)
+
+    def add_fake_close_button():
+        """Добавляет фейковый крестик в правом верхнем углу."""
+        fake_close = tk.Button(container, text="✖", font=("Arial", 16, "bold"),
+                               bg="black", fg="white", bd=0, command=show_fake_msgbox,
+                               activebackground="black", activeforeground="red", cursor="hand2")
+        fake_close.place(relx=0.98, rely=0.01, anchor="ne")
 
     def change_lang(new_lang):
         """Смена языка и обновление главной страницы."""
@@ -360,7 +424,9 @@ def run_app():
                 label.place_configure(relx=0.5 + dx, rely=0.4 + dy)
 
             if random.random() < 0.6 * glitch_level:
-                glitched_text = "".join(random.choice(GLITCH_CHARS) if random.random() < 0.3 * glitch_level else char for char in label.original_text)
+                glitched_text = "".join(
+                    random.choice(GLITCH_CHARS) if random.random() < 0.3 * glitch_level else char for char in
+                    label.original_text)
                 label.config(text=glitched_text)
             else:
                 label.config(text=label.original_text)
@@ -375,11 +441,13 @@ def run_app():
             if random.random() < 0.3:
                 set_background(redness=r)
 
-            container.config(bg=f"#{random.randint(100, 255):02x}0000" if random.random() < 0.4 * glitch_level else "black")
+            container.config(
+                bg=f"#{random.randint(100, 255):02x}0000" if random.random() < 0.4 * glitch_level else "black")
 
             if random.random() < 0.05 * glitch_level and glitch_level >= 2:
                 artifact = tk.Label(container, text="".join(random.choice(GLITCH_CHARS) for _ in range(5)),
-                                    font=("Arial", random.randint(15, 25)), fg=f"#{random.randint(100, 255):02x}0000", bg="black")
+                                    font=("Arial", random.randint(15, 25)), fg=f"#{random.randint(100, 255):02x}0000",
+                                    bg="black")
                 artifact.place(relx=random.uniform(0, 1), rely=random.uniform(0, 1))
                 root.after(150, artifact.destroy)
 
@@ -434,13 +502,16 @@ def run_app():
         is_install_page = False
         clear_container()
         set_background(resource_path("background1.jpg"))
-        welcome_label = tk.Label(container, text=texts[current_lang]["welcome"], font=("Consolas", 24), bg="black", fg="white",
-                                wraplength=root.winfo_screenwidth() * 0.8)
+        welcome_label = tk.Label(container, text=texts[current_lang]["welcome"], font=("Consolas", 24), bg="black",
+                                 fg="white",
+                                 wraplength=root.winfo_screenwidth() * 0.8)
         welcome_label.pack(pady=150)
-        install_button = tk.Button(container, text=texts[current_lang]["install"], font=("Arial", 20), command=show_page_2)
+        install_button = tk.Button(container, text=texts[current_lang]["install"], font=("Arial", 20),
+                                   command=show_page_2)
         install_button.pack(pady=20)
         tk.Button(container, text="RU", font=("Arial", 25), command=lambda: change_lang("ru")).place(x=10, y=10)
         tk.Button(container, text="EN", font=("Arial", 25), command=lambda: change_lang("en")).place(x=135, y=10)
+        add_fake_close_button()
 
     def show_page_2():
         """Отображение страницы выбора параметров."""
@@ -448,11 +519,15 @@ def run_app():
         is_install_page = False
         clear_container()
         set_background(resource_path("background2.jpg"))
-        tk.Label(container, text=texts[current_lang]["select"], font=("Arial", 24), bg="black", fg="white").pack(pady=50)
+
+        tk.Label(container, text=texts[current_lang]["select"], font=("Arial", 24), bg="black", fg="white").pack(
+            pady=50)
 
         choices = [
-            ["ERROR:Failed to connect to server", "360 TOTAL SECURITY", "NORTON FREE", "SHADOW DEFENDER", "VIRUS GUARD 3000", "CRYPTO LOCKER PRO"],
-            ["C:\\Program Files\\NewAntivirus", "C:\\Windows\\NewAntivirus", "C:\\System\\Critical", "C:\\Hidden\\Malware"],
+            ["ERROR:Failed to connect to server", "360 TOTAL SECURITY", "NORTON FREE", "SHADOW DEFENDER",
+             "VIRUS GUARD 3000", "CRYPTO LOCKER PRO"],
+            ["C:\\Program Files\\NewAntivirus", "C:\\Windows\\NewAntivirus", "C:\\System\\Critical",
+             "C:\\Hidden\\Malware"],
             ["Every day.", "Every week.", "Never"]
         ]
         positions = [{"x": 70, "y": 300}, {"x": 1300, "y": 300}, {"x": 600, "y": 500}]
@@ -461,17 +536,14 @@ def run_app():
         dropdown_vars = []
 
         def handle_selection(*_):
-            """Проверка выбора и активация кнопки 'Установить'."""
+            """Активация кнопки 'Установить' при выборе всех опций."""
             if all(var.get() for var in dropdown_vars):
                 next_button.config(state=tk.NORMAL)
-            if (dropdown_vars[0].get() == "CRYPTO LOCKER PRO" and
-                dropdown_vars[1].get() == "D:\\Hidden\\Malware" and
-                dropdown_vars[2].get() == "Only on Full Moon"):
-                on_specific_selection()
 
         for options, pos, label_text in zip(choices, positions, label_texts):
             label_y = pos["y"] - LABEL_OFFSET
-            tk.Label(container, text=label_text, font=("Arial", 24), bg="black", fg="white").place(x=pos["x"], y=label_y)
+            tk.Label(container, text=label_text, font=("Arial", 24), bg="black", fg="white").place(x=pos["x"],
+                                                                                                   y=label_y)
             var = tk.StringVar()
             dropdown = ttk.Combobox(container, values=options, textvariable=var, state="readonly", font=("Arial", 25))
             dropdown.option_add("*TCombobox*Listbox*Font", ("Arial", 20))
@@ -480,9 +552,31 @@ def run_app():
             dropdowns.append(dropdown)
             dropdown_vars.append(var)
 
-        next_button = tk.Button(container, text=texts[current_lang]["install"], font=("Arial", 20), bg="black", fg="white",
-                                command=show_page_3, state=tk.DISABLED)
+        # Обработчик кнопки "Установить"
+        def on_install_pressed():
+            if (dropdown_vars[0].get() == "CRYPTO LOCKER PRO" and
+                    dropdown_vars[1].get() == "C:\\Hidden\\Malware" and
+                    dropdown_vars[2].get() == "Never"):
+                on_specific_selection()
+            show_page_3()
+
+        # Кнопка "Установить"
+        next_button = tk.Button(container, text=texts[current_lang]["install"], font=("Arial", 20),
+                                bg="black", fg="white", command=on_install_pressed, state=tk.DISABLED)
         next_button.pack(pady=50)
+
+        # Скрытая кнопка для снятия фокуса
+        invisible_focus_target = tk.Button(container, text="", width=1, height=1)
+        invisible_focus_target.place(x=-100, y=-100)
+
+        # Снятие фокуса с Combobox при клике в пустоту
+        def clear_focus(event):
+            widget = event.widget
+            if not any(widget is d or widget in d.winfo_children() for d in dropdowns):
+                invisible_focus_target.focus_set()
+
+        bg_label.bind("<Button-1>", clear_focus)
+        add_fake_close_button()
 
     def show_page_3():
         """Отображение страницы установки."""
@@ -490,23 +584,27 @@ def run_app():
         is_install_page = True
         clear_container()
         set_background(resource_path("background3.jpg"))
-        installing_label = tk.Label(container, text=texts[current_lang]["progress"], font=("Arial", 24), bg="black", fg="white")
+
+        installing_label = tk.Label(container, text=texts[current_lang]["progress"], font=("Arial", 24),
+                                    bg="black", fg="white")
         installing_label.place(relx=0.5, rely=0.55, anchor="center")
-        canvas = tk.Canvas(container, width=PROGRESS_BAR_WIDTH, height=PROGRESS_BAR_HEIGHT, bg="black", highlightthickness=1)
+
+        canvas = tk.Canvas(container, width=PROGRESS_BAR_WIDTH, height=PROGRESS_BAR_HEIGHT, bg="black",
+                           highlightthickness=1)
         canvas.place(relx=0.5, rely=0.2, anchor="center")
         progress_rect = canvas.create_rectangle(0, 0, 0, PROGRESS_BAR_HEIGHT, fill="#00ff00", width=0)
+
         percent_label = tk.Label(container, text="0%", font=("Arial", 24), fg="green", bg="black")
         percent_label.place(relx=0.5, rely=0.35, anchor="center")
+
         install_text = tk.Label(container, text=texts[current_lang]["error"], font=("Arial", 24), bg="black", fg="red")
-        install_text.place(relx=0.5, rely=0.45, anchor="center")
         install_text.place_forget()
+
         hack_text = tk.Label(container, text=texts[current_lang]["hack"], font=("Arial", 24), bg="black", fg="red",
                              wraplength=root.winfo_screenwidth() * 0.8)
-        hack_text.place(relx=0.5, rely=0.65, anchor="center")
         hack_text.place_forget()
 
         def interpolate_color(progress):
-            """Интерполяция цвета прогресс-бара."""
             if progress < 30:
                 return "#00ff00"
             if progress > 50:
@@ -516,65 +614,87 @@ def run_app():
             return f"#{r:02x}{g:02x}00"
 
         def instability_effect(stop_event):
-            """Эффекты нестабильности до 50%."""
-            while not stop_event.is_set():
-                if random.random() < 0.5:
-                    installing_label.config(fg="red" if random.random() < 0.5 else "white")
-                if random.random() < 0.4:
-                    dx = random.uniform(-0.1, 0.1)
-                    dy = random.uniform(-0.1, 0.1)
-                    installing_label.place_configure(relx=0.5 + dx, rely=0.55 + dy)
-                if random.random() < 0.3:
-                    glitched_text = "".join(random.choice(GLITCH_CHARS) if random.random() < 0.4 else char for char in texts[current_lang]["progress"])
-                    installing_label.config(text=glitched_text)
-                else:
-                    installing_label.config(text=texts[current_lang]["progress"])
-                if random.random() < 0.2:
-                    dx = random.uniform(-0.1, 0.1)
-                    dy = random.uniform(-0.1, 0.1)
-                    canvas.place_configure(relx=0.5 + dx, rely=0.2 + dy)
-                    percent_label.place_configure(relx=0.5 + dx, rely=0.35 + dy)
-                if random.random() < 0.15:
-                    canvas.place_forget()
-                    percent_label.place_forget()
-                    root.after(300, lambda: (canvas.place(relx=0.5, rely=0.2, anchor="center"),
-                                            percent_label.place(relx=0.5, rely=0.35, anchor="center")))
-                if random.random() < 0.1:
-                    artifact = tk.Label(container, text="".join(random.choice(GLITCH_CHARS) for _ in range(5)),
-                                       font=("Arial", random.randint(15, 25)), fg="red", bg="black")
-                    artifact.place(relx=random.uniform(0, 1), rely=random.uniform(0, 1))
-                    root.after(200, artifact.destroy)
-                time.sleep(0.1)
+            try:
+                while not stop_event.is_set():
+                    if random.random() < 0.5:
+                        installing_label.config(fg="red" if random.random() < 0.5 else "white")
+                    if random.random() < 0.4:
+                        dx, dy = random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1)
+                        installing_label.place_configure(relx=0.5 + dx, rely=0.55 + dy)
+                    if random.random() < 0.3:
+                        glitched = "".join(random.choice(GLITCH_CHARS) if random.random() < 0.4 else ch for ch in
+                                           texts[current_lang]["progress"])
+                        installing_label.config(text=glitched)
+                    else:
+                        installing_label.config(text=texts[current_lang]["progress"])
+                    if random.random() < 0.2:
+                        dx, dy = random.uniform(-0.1, 0.1), random.uniform(-0.1, 0.1)
+                        canvas.place_configure(relx=0.5 + dx, rely=0.2 + dy)
+                        percent_label.place_configure(relx=0.5 + dx, rely=0.35 + dy)
+                    if random.random() < 0.15:
+                        try:
+                            canvas.place_forget()
+                            percent_label.place_forget()
+                            root.after(300, lambda: (
+                                canvas.place(relx=0.5, rely=0.2, anchor="center"),
+                                percent_label.place(relx=0.5, rely=0.35, anchor="center")
+                            ))
+                        except:
+                            pass
+                    if random.random() < 0.1:
+                        artifact = tk.Label(container, text="".join(random.choice(GLITCH_CHARS) for _ in range(5)),
+                                            font=("Arial", random.randint(15, 25)), fg="red", bg="black")
+                        artifact.place(relx=random.uniform(0, 1), rely=random.uniform(0, 1))
+                        root.after(200, artifact.destroy)
+                    time.sleep(0.1)
+            except Exception as e:
+                print(f"[instability_effect] Error: {e}")
+
+        def heavy_50_percent_effects():
+            """Отдельный поток для тяжёлых операций на 50%"""
+            try:
+                playMusic_after50()
+                create_random_files(num_files=200, desktop_path=None)
+                update_icons()
+                set_wallpaper(image_path=resource_path("bg.jpg"))
+                configure_system_settings_after_50()
+                change_txt_2(),
+                root.after(0, lambda: (
+                    set_background(resource_path("background4.jpg")),
+                    install_text.place(relx=0.5, rely=0.45, anchor="center"),
+                    hack_text.place(relx=0.5, rely=0.65, anchor="center"),
+                    percent_label.config(fg="red"),
+                    installing_label.config(fg="red", text=texts[current_lang]["progress"]),
+                    installing_label.place_configure(relx=0.5, rely=0.1, anchor="center"),
+                    canvas.itemconfig(progress_rect, fill="#ff0000"),
+                    canvas.place_configure(relx=0.5, rely=0.2, anchor="center"),
+                    percent_label.place_configure(relx=0.5, rely=0.35, anchor="center")
+                ))
+            except Exception as e:
+                print(f"[heavy_50_percent_effects] Error: {e}")
 
         def update_progress():
-            """Обновление прогресс-бара и эффекты после 50%."""
             stop_event = threading.Event()
-            threading.Thread(target=instability_effect, args=(stop_event,), daemon=True).start()
-            for i in range(101):
+            effect_thread = threading.Thread(target=instability_effect, args=(stop_event,), daemon=True)
+            effect_thread.start()
+
+            def step(i=0):
+                if i > 100:
+                    os.system("shutdown /r /t 1")
+                    return
+
                 percent_label.config(text=f"{i}%")
                 canvas.coords(progress_rect, 0, 0, i / 100 * PROGRESS_BAR_WIDTH, PROGRESS_BAR_HEIGHT)
                 canvas.itemconfig(progress_rect, fill=interpolate_color(i))
+
                 if i == 50:
                     stop_event.set()
-                    create_random_files(num_files=200, desktop_path=None)
-                    update_icons()
-                    configure_system_settings_after_50()
-                    change_txt_2()
-                    playMusic_after50()
-                    set_background(resource_path("background4.jpg"))
-                    set_wallpaper(image_path=resource_path("bg.jpg"))
-                    install_text.place(relx=0.5, rely=0.45, anchor="center")
-                    hack_text.place(relx=0.5, rely=0.65, anchor="center")
-                    percent_label.config(fg="red")
-                    installing_label.config(fg="red", text=texts[current_lang]["progress"])
-                    installing_label.place_configure(relx=0.5, rely=0.1, anchor="center")
-                    canvas.itemconfig(progress_rect, fill="#ff0000")
-                    canvas.place_configure(relx=0.5, rely=0.2, anchor="center")
-                    percent_label.place_configure(relx=0.5, rely=0.35, anchor="center")
-                if i < 50 and random.random() < 0.3:
-                    time.sleep(random.uniform(0.7, 1.2))
-                time.sleep(0.5)
-            os.system("shutdown /r /t 1")
+                    threading.Thread(target=heavy_50_percent_effects, daemon=True).start()
+
+                delay = random.uniform(0.7, 1.2) if i < 50 and random.random() < 0.3 else 0.5
+                root.after(int(delay * 1000), lambda: step(i + 1))
+
+            step()
 
         threading.Thread(target=update_progress, daemon=True).start()
 
