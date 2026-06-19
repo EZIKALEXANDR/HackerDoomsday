@@ -2,9 +2,9 @@ pyinstaller --onefile --windowed -noconsole ^
 --name "HackerDoomsday" ^
 --icon "appicon.ico" ^
 --uac-admin ^
+--hidden-import=_cffi_backend ^
 --add-data "resources/Hacker.mp4;resources" ^
 --add-data "resources/Hacker2.mp4;resources" ^
---add-data "resources/BTDevManager.exe;resources" ^
 --add-data "resources/background1.jpg;resources" ^
 --add-data "resources/background2.jpg;resources" ^
 --add-data "resources/background3.jpg;resources" ^
@@ -22,6 +22,7 @@ pyinstaller --onefile --windowed -noconsole ^
 --add-data "resources/runapp_main.MP3;resources" ^
 --add-data "resources/after50.mp3;resources" ^
 --add-data "resources/scaryfor3.MP3;resources" ^
+--add-data "resources/Player.exe;resources" ^
 --version-file version_info.txt ^
 main.py
 
